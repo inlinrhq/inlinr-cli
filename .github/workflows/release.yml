@@ -1,0 +1,56 @@
+# Cross-compile inlinr CLI for darwin/linux/windows × amd64/arm64 on every
+# `v*` tag, publish a GitHub Release with binaries + SHA256SUMS.txt.
+# The VS Code plugin fetches from this release's `latest` alias.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Cross-compile
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist
+          LDFLAGS="-s -w -X main.Version=${VERSION}"
+          PKG="./cmd/inlinr"
+          for target in \
+            "darwin amd64" \
+            "darwin arm64" \
+            "linux amd64" \
+            "linux arm64" \
+            "windows amd64"
+          do
+            set -- $target
+            os=$1
+            arch=$2
+            ext=""
+            [ "$os" = "windows" ] && ext=".exe"
+            echo "→ building $os/$arch"
+            GOOS=$os GOARCH=$arch go build -ldflags "$LDFLAGS" -o "dist/inlinr-${os}-${arch}${ext}" "$PKG"
+          done
+          cd dist
+          sha256sum inlinr-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/inlinr-*
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
