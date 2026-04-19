@@ -36,7 +36,7 @@ func runActivate(args []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	init, err := device.Init(ctx, cfg.Auth.APIURL, device.InitRequest{
+	init, err := device.Init(ctx, config.APIURL, device.InitRequest{
 		ClientName: *clientName,
 		Editor:     *editor,
 		Platform:   config.Platform(),
@@ -53,7 +53,7 @@ func runActivate(args []string) error {
 		_ = openBrowser(init.VerificationURIComplete)
 	}
 
-	tr, err := device.PollUntil(ctx, cfg.Auth.APIURL, init.DeviceCode, init.Interval, init.ExpiresIn)
+	tr, err := device.PollUntil(ctx, config.APIURL, init.DeviceCode, init.Interval, init.ExpiresIn)
 	if err != nil {
 		return fmt.Errorf("poll for token: %w", err)
 	}

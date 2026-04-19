@@ -34,7 +34,7 @@ func runSignout(args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client := api.New(cfg.Auth.APIURL, cfg.Auth.DeviceToken, "inlinr-cli/"+Version)
+	client := api.New(config.APIURL, cfg.Auth.DeviceToken, "inlinr-cli/"+Version)
 	serverErr := client.RevokeDevice(ctx)
 	switch {
 	case serverErr == nil:
