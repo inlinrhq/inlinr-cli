@@ -35,7 +35,6 @@ Stored at `~/.inlinr/config.toml` (overridable with `$INLINR_HOME`).
 ```toml
 [auth]
 device_token = "in_d_..."
-api_url = "https://inlinr.com"
 
 [behavior]
 heartbeat_rate_limit_seconds = 120

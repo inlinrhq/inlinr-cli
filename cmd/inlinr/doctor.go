@@ -38,7 +38,7 @@ func runDoctor(args []string) error {
 	fmt.Printf("  home:           %s\n", home)
 	fmt.Printf("  config:         %s\n", path)
 	fmt.Printf("  queue:          %s\n", qp)
-	fmt.Printf("  api_url:        %s\n", cfg.Auth.APIURL)
+	fmt.Printf("  api_url:        %s\n", config.APIURL)
 	fmt.Printf("  authenticated:  %t\n", cfg.Auth.DeviceToken != "")
 	fmt.Printf("  rate_limit_s:   %d\n", cfg.Behavior.HeartbeatRateLimitSeconds)
 
@@ -53,7 +53,7 @@ func runDoctor(args []string) error {
 	// Server reachability (no auth needed — just hit /)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, cfg.Auth.APIURL, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, config.APIURL, nil)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("  server_reach:   FAIL (%v)\n", err)

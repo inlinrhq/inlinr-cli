@@ -53,9 +53,9 @@ If you edit any of the sections below, update the matching sections in the serve
 
 ### Device flow (auth)
 
-1. `POST {api_url}/api/auth/device` with `{ client_name, editor, platform }` → `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
+1. `POST https://inlinr.com/api/auth/device` with `{ client_name, editor, platform }` → `{ device_code, user_code, verification_uri, verification_uri_complete, expires_in, interval }`.
 2. User opens `verification_uri_complete` in a browser, signs in with GitHub, approves.
-3. `POST {api_url}/api/auth/device/token` with `{ device_code }`, polled every `interval` seconds.
+3. `POST https://inlinr.com/api/auth/device/token` with `{ device_code }`, polled every `interval` seconds.
    - While pending: `{ "error": "authorization_pending" }` (HTTP 400).
    - On approval: `{ access_token: "in_d_...", device: {...}, user: {...} }` (HTTP 200).
 4. CLI stores `access_token` in `~/.inlinr/config.toml` as `auth.device_token`.

@@ -11,10 +11,13 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// APIURL is the fixed Inlinr server base URL. Not user-configurable — the
+// service is SaaS-only, not self-hostable.
+const APIURL = "https://inlinr.com"
+
 type Config struct {
 	Auth struct {
 		DeviceToken string `toml:"device_token"`
-		APIURL      string `toml:"api_url"`
 	} `toml:"auth"`
 	Behavior struct {
 		HeartbeatRateLimitSeconds int `toml:"heartbeat_rate_limit_seconds"`
@@ -29,7 +32,6 @@ type Config struct {
 // Defaults returns a Config with sane defaults applied (no token yet).
 func Defaults() Config {
 	var c Config
-	c.Auth.APIURL = "https://inlinr.com"
 	c.Behavior.HeartbeatRateLimitSeconds = 120
 	c.Behavior.OfflineQueueMax = 10_000
 	c.Logging.Level = "info"

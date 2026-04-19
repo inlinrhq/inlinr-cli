@@ -123,7 +123,7 @@ func runHeartbeat(args []string) error {
 }
 
 func flush(ctx context.Context, q *queue.Queue, cfg config.Config) error {
-	client := api.New(cfg.Auth.APIURL, cfg.Auth.DeviceToken, "inlinr-cli/"+Version)
+	client := api.New(config.APIURL, cfg.Auth.DeviceToken, "inlinr-cli/"+Version)
 	for {
 		b, err := q.Take(ctx, batchSize)
 		if err != nil {
