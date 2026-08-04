@@ -1,0 +1,57 @@
+#!/bin/sh
+# Refuse a direct push to the default branch.
+#
+# This is a *local* guard, not enforcement. GitHub's branch protection and
+# rulesets require a paid plan on private repositories, so there is nothing
+# server-side stopping a push to main today. Anyone can bypass this with
+# --no-verify, and a clone that never ran the install line below has no hook at
+# all. It catches the accident, which is the failure mode that actually
+# happens; it does not stop a determined push.
+#
+# Install (once per clone):
+#   cp .githooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# Copied into .git/hooks rather than activated with
+# `git config core.hooksPath .githooks`, which looks tidier but is worse: a
+# hook read from the working tree only exists on branches that contain it. Set
+# that way, the hook silently disappears the moment you check out a branch
+# forked before it landed — which is precisely when you are most likely to be
+# mid-feature and to fumble a push. .git/hooks is outside the working tree, so
+# it holds across every branch and every checkout.
+#
+# Unlike inlinr-web, a push here does not deploy anything: releases are cut
+# from tags (see .github/workflows/release.yml), so main only runs CI. The
+# reason to go through a pull request anyway is that main is what release tags
+# are cut from — whatever lands here ships to users the moment someone tags,
+# with no review step in between.
+#
+# Deliberate override:
+#   git push --no-verify
+
+protected="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')"
+[ -n "$protected" ] || protected=main
+
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  # A deletion pushes the all-zero sha; let the remote decide on those.
+  case "$local_sha" in
+    *[!0]*) ;;
+    *) continue ;;
+  esac
+
+  case "$remote_ref" in
+    "refs/heads/$protected")
+      echo "pre-push: refusing to push directly to '$protected'." >&2
+      echo >&2
+      echo "  Open a pull request instead:" >&2
+      echo >&2
+      echo "    git switch -c feat/your-change" >&2
+      echo "    git push -u origin HEAD" >&2
+      echo "    gh pr create" >&2
+      echo >&2
+      echo "  To override deliberately: git push --no-verify" >&2
+      exit 1
+      ;;
+  esac
+done
+
+exit 0
