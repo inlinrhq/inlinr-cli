@@ -34,8 +34,18 @@ func runHeartbeat(args []string) error {
 	cursorpos := fs.Int("cursorpos", -1, "current cursor character offset")
 	lines := fs.Int("lines-in-file", -1, "total line count in the file")
 	aiTool := fs.String("ai-tool", "", "copilot|cursor|claude-code|codeium|windsurf|aider")
-	aiChanges := fs.Int("ai-line-changes", -1, "lines changed by AI in the current window")
-	humanChanges := fs.Int("human-line-changes", -1, "lines changed by human in the current window")
+	aiChanges := fs.Int("ai-line-changes", -1, "net lines changed by AI in the current window")
+	humanChanges := fs.Int("human-line-changes", -1, "net lines changed by human in the current window")
+	linesAdded := fs.Int("lines-added", -1, "lines added in the current window (any author)")
+	linesDeleted := fs.Int("lines-deleted", -1, "lines deleted in the current window (any author)")
+	aiLinesAdded := fs.Int("ai-lines-added", -1, "lines added by AI in the current window")
+	aiLinesDeleted := fs.Int("ai-lines-deleted", -1, "lines deleted by AI in the current window")
+	aiSession := fs.String("ai-session", "", "assistant conversation id these beats belong to")
+	aiModel := fs.String("ai-model", "", "assistant model, e.g. claude-opus-5")
+	aiInputTokens := fs.Int64("ai-input-tokens", -1, "input tokens consumed by the assistant")
+	aiOutputTokens := fs.Int64("ai-output-tokens", -1, "output tokens produced by the assistant")
+	aiCacheReadTokens := fs.Int64("ai-cache-read-tokens", -1, "cached input tokens re-read by the assistant")
+	aiCacheWriteTokens := fs.Int64("ai-cache-write-tokens", -1, "input tokens written to the assistant's prompt cache")
 	editor := fs.String("editor", "", "editor id (vscode, intellij, neovim, ...)")
 	plugin := fs.String("plugin", "", "plugin user-agent, e.g. vscode-inlinr/0.1.0")
 	extraStdin := fs.Bool("extra-heartbeats", false, "read additional heartbeats as a JSON array from stdin")
@@ -66,22 +76,32 @@ func runHeartbeat(args []string) error {
 	}
 
 	primary := heartbeat.Heartbeat{
-		Entity:           *entity,
-		Type:             *entityType,
-		Time:             *timeFlag,
-		ProjectGitRemote: *projectRemote,
-		Branch:           strPtr(*branch),
-		Language:         strPtr(*language),
-		Category:         strPtr(*category),
-		IsWrite:          *isWrite,
-		LineNumber:       intPtrOrNil(*lineno),
-		CursorPos:        intPtrOrNil(*cursorpos),
-		Lines:            intPtrOrNil(*lines),
-		AITool:           strPtr(*aiTool),
-		AILineChanges:    intPtrOrNil(*aiChanges),
-		HumanLineChanges: intPtrOrNil(*humanChanges),
-		Editor:           strPtr(*editor),
-		Plugin:           strPtr(*plugin),
+		Entity:             *entity,
+		Type:               *entityType,
+		Time:               *timeFlag,
+		ProjectGitRemote:   *projectRemote,
+		Branch:             strPtr(*branch),
+		Language:           strPtr(*language),
+		Category:           strPtr(*category),
+		IsWrite:            *isWrite,
+		LineNumber:         intPtrOrNil(*lineno),
+		CursorPos:          intPtrOrNil(*cursorpos),
+		Lines:              intPtrOrNil(*lines),
+		AITool:             strPtr(*aiTool),
+		AILineChanges:      intPtrOrNil(*aiChanges),
+		HumanLineChanges:   intPtrOrNil(*humanChanges),
+		LinesAdded:         intPtrOrNil(*linesAdded),
+		LinesDeleted:       intPtrOrNil(*linesDeleted),
+		AILinesAdded:       intPtrOrNil(*aiLinesAdded),
+		AILinesDeleted:     intPtrOrNil(*aiLinesDeleted),
+		AISession:          strPtr(*aiSession),
+		AIModel:            strPtr(*aiModel),
+		AIInputTokens:      int64PtrOrNil(*aiInputTokens),
+		AIOutputTokens:     int64PtrOrNil(*aiOutputTokens),
+		AICacheReadTokens:  int64PtrOrNil(*aiCacheReadTokens),
+		AICacheWriteTokens: int64PtrOrNil(*aiCacheWriteTokens),
+		Editor:             strPtr(*editor),
+		Plugin:             strPtr(*plugin),
 	}
 
 	qp, err := config.QueuePath()
@@ -193,6 +213,13 @@ func strPtr(s string) *string {
 }
 
 func intPtrOrNil(i int) *int {
+	if i < 0 {
+		return nil
+	}
+	return &i
+}
+
+func int64PtrOrNil(i int64) *int64 {
 	if i < 0 {
 		return nil
 	}
