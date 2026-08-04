@@ -1,6 +1,17 @@
 # inlinr-cli
 
+> **Reprise de session** — lis d'abord `../PROGRESS.md` (racine du workspace) : il tient l'état
+> d'avancement du chantier en cours, la prochaine action, et couvre les 3 repos. Mets-le à jour
+> après chaque modification.
+
 Go daemon that editor plugins spawn to send heartbeats. Owns: auth token storage, offline SQLite queue, batch upload, HTTP retry. Plugins never touch the network directly.
+
+It also owns **AI transcript parsing** (`inlinr sync-ai`, `internal/ai/`). Token
+counts and per-tool edit sizes only exist inside an assistant's own local
+session logs, so parsing them here means one implementation covers the terminal,
+the desktop app and every editor extension — the plugins stay dumb event pumps.
+Same split WakaTime uses: their Claude plugin passes three flags, all the
+parsers live in the CLI.
 
 Sibling repos:
 - `inlinrhq/my.inlinr.com` — server (ingest + dashboard). Source of truth for the wire contract below.
@@ -11,8 +22,8 @@ Sibling repos:
 
 ## Tech
 
-- Go 1.22+
-- `github.com/mattn/go-sqlite3` — offline queue
+- Go 1.25+ (the `modernc.org/sqlite` driver requires it; Go 1.21 is past end of life)
+- `modernc.org/sqlite` — offline queue (pure Go, no cgo, so cross-compilation stays trivial)
 - `github.com/BurntSushi/toml` — config file
 - Stdlib HTTP, `flag`, `encoding/json`
 
@@ -32,7 +43,32 @@ internal/
   api/                   # HTTP client for the ingest endpoint
   heartbeat/             # wire struct (snake_case JSON)
   queue/                 # SQLite-backed FIFO
+  ai/                    # assistant transcript parsers + sync watermark/lock
+  gitctx/                # remote + branch from .git (worktree-aware)
 ```
+
+### `inlinr sync-ai`
+
+Parses AI assistant transcripts into heartbeats. Claude Code today
+(`~/.claude/projects/**/*.jsonl`); one file per assistant under `internal/ai/`.
+
+```sh
+inlinr sync-ai [--plugin claude-code-inlinr/0.1.0] [--project-folder <dir>] [--dry-run]
+```
+
+Three details that matter, all learned from real transcripts:
+- **Input tokens include cache creation and cache reads.** Most of a Claude Code
+  turn is cached context; counting only `input_tokens` under-reports by an order
+  of magnitude.
+- **Streaming duplicates replace, they don't accumulate.** The same `message.id`
+  is logged repeatedly with running totals; summing them multiplies every
+  response's cost by its chunk count.
+- **A `filePath` is not a write.** The Read tool reports one too. Only a
+  `structuredPatch`, a `newString`/`oldString`, or a create/update/delete counts.
+
+Safe to call on every assistant turn: a watermark in `~/.inlinr/ai-sync.json`
+means only new lines are read, and a lock in `~/.inlinr/ai-sync.lock` stops two
+editors double-counting. Sessions outside a git repository are skipped.
 
 ## Build & distribution
 
@@ -78,12 +114,25 @@ If you edit any of the sections below, update the matching sections in the serve
   "cursorpos":           1023,                       // optional
   "lines":               180,                        // optional — total lines in file
   "ai_tool":             "copilot",                  // optional — copilot|cursor|claude-code|codeium|windsurf|aider
-  "ai_line_changes":     12,                         // optional
-  "human_line_changes":  3,                          // optional
+  "ai_line_changes":     12,                         // optional — net delta (legacy)
+  "human_line_changes":  3,                          // optional — net delta (legacy)
+  "lines_added":         14,                         // optional — 0 is meaningful; absent = not counted
+  "lines_deleted":       2,                          // optional
+  "ai_lines_added":      12,                         // optional
+  "ai_lines_deleted":    1,                          // optional
+  "ai_session":          "9f2c1ab0-...",             // optional — one assistant conversation
+  "ai_model":            "claude-opus-5",            // optional
+  "ai_input_tokens":     412334,                     // optional — incl. cache create + cache read
+  "ai_output_tokens":    8021,                       // optional
   "editor":              "vscode",                   // optional
   "plugin":              "vscode-inlinr/0.1.0"       // optional — user-agent style
 }]
 ```
+
+`category` also accepts `ai-coding`, used by `inlinr sync-ai` for time spent
+driving an assistant rather than typing.
+
+Token fields come only from `inlinr sync-ai`; editor plugins never send them.
 
 Response: `{ "responses": [[{"id":"hb_0"}, 201], ...], "accepted": N }`. Per-beat status array lets the CLI dequeue precisely.
 
