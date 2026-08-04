@@ -6,6 +6,43 @@ SQLite queue, and uploads batches to the Inlinr ingest endpoint.
 
 Plugins call this binary as a subprocess — they don't talk to the API directly.
 
+## Install
+
+```sh
+# macOS / Linux
+curl -fsSL https://inlinr.com/install.sh | sh
+```
+
+```powershell
+# Windows
+irm https://inlinr.com/install.ps1 | iex
+```
+
+Both verify the published SHA-256 before installing and refuse to continue on a
+mismatch, and both put the binary somewhere already on your `PATH` — the
+Windows one adds `%LOCALAPPDATA%\Inlinr\bin` and sets it for the current
+session too, so `inlinr activate` works immediately rather than after a restart
+nobody expects.
+
+**On Windows this also avoids the SmartScreen dialog**, and not by suppressing
+it. That warning comes from Mark-of-the-Web: browsers tag downloaded files with
+a `Zone.Identifier` stream and SmartScreen challenges tagged executables from
+publishers it does not recognise. `Invoke-WebRequest` does not attach the tag,
+so a binary fetched by the script does not trigger it. The binary is byte for
+byte the same either way; only its provenance metadata differs. Real-time
+antivirus can still object — nothing but code signing fixes that.
+
+Then:
+
+```
+inlinr activate
+```
+
+## Downloading the binary by hand
+
+Everything below is for people who would rather not pipe a script into a shell.
+It is the same binary.
+
 ## Downloads and the Windows warning
 
 The binaries are **not code-signed**. On Windows that has two visible effects:

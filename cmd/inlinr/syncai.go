@@ -30,6 +30,7 @@ func runSyncAI(args []string) error {
 	configPath := fs.String("config", "", "path to config.toml (default: ~/.inlinr/config.toml)")
 	logFile := fs.String("log-file", "", "append stderr to this file in addition to the console")
 	dryRun := fs.Bool("dry-run", false, "parse and report without enqueuing or advancing the watermark")
+	throttle := fs.Int("throttle", 0, "skip if a sync ran fewer than N seconds ago (0 = always run)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -52,6 +53,18 @@ func runSyncAI(args []string) error {
 		return err
 	}
 
+	state := ai.LoadState(home)
+
+	// Checked before the lock and before touching the filesystem, because the
+	// whole point is to make a hook that fires on every tool call nearly free.
+	// The hooks that mean "this is over" — Stop, SessionEnd — pass no throttle
+	// and always run, so nothing is ever left unsynced at the end.
+	if *throttle > 0 && !state.LastSyncAt.IsZero() {
+		if time.Since(state.LastSyncAt) < time.Duration(*throttle)*time.Second {
+			return nil
+		}
+	}
+
 	lock, err := ai.AcquireLock(home)
 	if err != nil {
 		if errors.Is(err, ai.ErrSyncBusy) {
@@ -63,7 +76,6 @@ func runSyncAI(args []string) error {
 	}
 	defer lock.Release()
 
-	state := ai.LoadState(home)
 	dirs, err := ai.ClaudeHome()
 	if err != nil {
 		return err
@@ -73,6 +85,12 @@ func runSyncAI(args []string) error {
 		return err
 	}
 	if len(paths) == 0 {
+		// Still record the attempt, so a throttled hook does not re-walk the
+		// transcript directory on every tool call in a quiet session.
+		if !*dryRun {
+			state.LastSyncAt = time.Now()
+			_ = ai.SaveState(home, state)
+		}
 		return nil
 	}
 
@@ -139,7 +157,7 @@ func runSyncAI(args []string) error {
 	// Advance the watermark only after the beats are safely on the queue, so a
 	// failure replays rather than silently drops a conversation.
 	if newest.After(state.LastParsedAt) {
-		if err := ai.SaveState(home, ai.State{LastParsedAt: newest}); err != nil {
+		if err := ai.SaveState(home, ai.State{LastParsedAt: newest, LastSyncAt: time.Now()}); err != nil {
 			return err
 		}
 	}
