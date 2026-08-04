@@ -3,6 +3,7 @@ package ai
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -282,5 +283,46 @@ func TestSessionHeartbeatsWithoutRemote(t *testing.T) {
 	s := &Session{ID: "x", Tokens: Tokens{Input: 1}}
 	if beats := s.Heartbeats("", ""); beats != nil {
 		t.Errorf("beats = %v, want nil without a git remote", beats)
+	}
+}
+
+func TestTranscriptPathsSkipsSubagents(t *testing.T) {
+	// Subagent transcripts live in <session>/subagents/agent-*.jsonl. They are
+	// not sessions: their work is already in the parent's file as isSidechain
+	// lines, and a subagent transcript carries its own cwd — so reading them
+	// relies entirely on that flag being present on every line to avoid
+	// counting the same tokens and edits twice.
+	//
+	// On a real machine 1436 of 1504 files were subagents, every one reported
+	// as a session "skipped (no git remote)".
+	home := t.TempDir()
+	session := filepath.Join(home, "projects", "D--repo", "abc-123")
+	if err := os.MkdirAll(filepath.Join(session, "subagents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	real := filepath.Join(home, "projects", "D--repo", "abc-123.jsonl")
+	if err := os.WriteFile(real, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(session, "subagents", "agent-deadbeef.jsonl")
+	if err := os.WriteFile(sub, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := TranscriptPaths([]string{home}, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 {
+		t.Fatalf("want only the session transcript, got %d: %v", len(paths), paths)
+	}
+	if filepath.Base(paths[0]) != "abc-123.jsonl" {
+		t.Fatalf("wrong file kept: %s", paths[0])
+	}
+	for _, p := range paths {
+		if strings.Contains(filepath.ToSlash(p), "/subagents/") {
+			t.Fatalf("subagent transcript not skipped: %s", p)
+		}
 	}
 }
