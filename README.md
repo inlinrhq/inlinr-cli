@@ -24,6 +24,27 @@ Windows one adds `%LOCALAPPDATA%\Inlinr\bin` and sets it for the current
 session too, so `inlinr activate` works immediately rather than after a restart
 nobody expects.
 
+### If you have Go, skip all of this
+
+```
+go install github.com/inlinrhq/inlinr-cli/cmd/inlinr@latest
+```
+
+Nothing is downloaded as an executable, so there is nothing for a download
+scanner to object to, and the binary lands in your GOPATH bin which is usually
+already on your `PATH`. For a developer this is both the shortest path and the
+one with the fewest ways to go wrong.
+
+**If your antivirus deletes the download**, that is a false positive and the
+installer now says so with the ways forward. The detection is almost always
+`Trojan:Win32/Wacatac.B!ml` -- the `!ml` suffix means a machine-learning guess
+rather than a signature match, and Go binaries are the single most common thing
+it guesses wrong about. The one that fixes it for everyone
+rather than one machine at a time is
+[reporting it to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission)
+-- free, reviewed by a human, and a whitelisted hash ends the problem for every
+user of that release. Code signing is the real answer and is not done yet.
+
 **On Windows this also avoids the SmartScreen dialog**, and not by suppressing
 it. That warning comes from Mark-of-the-Web: browsers tag downloaded files with
 a `Zone.Identifier` stream and SmartScreen challenges tagged executables from
