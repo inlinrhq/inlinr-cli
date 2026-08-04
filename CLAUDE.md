@@ -74,7 +74,13 @@ editors double-counting. Sessions outside a git repository are skipped.
 
 - `make build` → `bin/inlinr` (native).
 - `make build-all` → `dist/inlinr-{os}-{arch}` (5 binaries) + `SHA256SUMS.txt`.
-- Release: tag `vX.Y.Z`, GitHub Actions builds, signs (macOS notarization, Windows code-sign), uploads.
+- Release: tag `vX.Y.Z`, GitHub Actions cross-compiles, publishes `SHA256SUMS.txt`, uploads.
+- **Nothing is code-signed.** This line used to claim macOS notarization and
+  Windows code-signing; neither exists in `.github/workflows/release.yml`. The
+  consequence is real and user-visible: Windows SmartScreen warns on the `.exe`,
+  and some antivirus engines heuristically flag unsigned Go binaries. Fixing it
+  needs a paid Authenticode certificate, not a workflow change — see the
+  Downloads section of README.md.
 - Plugins auto-download from GitHub Releases and verify against SHA256SUMS.txt.
 
 ## Version injection
