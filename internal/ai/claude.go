@@ -175,7 +175,27 @@ func TranscriptPaths(dirs []string, after time.Time) ([]string, error) {
 				// A single unreadable subdirectory must not abort the sweep.
 				return nil //nolint:nilerr
 			}
-			if d.IsDir() || filepath.Ext(d.Name()) != ".jsonl" {
+			if d.IsDir() {
+				// Subagent transcripts live in
+				// <session-uuid>/subagents/agent-*.jsonl and are not sessions.
+				// Their work is already in the parent session's own file, as
+				// lines flagged isSidechain.
+				//
+				// Skipping the directory rather than filtering the files is
+				// deliberate. Reading them relies on that flag being present on
+				// every line to avoid counting the same tokens and edits twice
+				// — a subagent transcript carries its own cwd, so one
+				// unflagged line is enough to double-count a whole session.
+				//
+				// It also fixes the diagnostics: on this machine 1436 of 1504
+				// files were subagents, and every one was reported as a session
+				// "skipped (no git remote)". That reads as a broken setup.
+				if d.Name() == "subagents" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if filepath.Ext(d.Name()) != ".jsonl" {
 				return nil
 			}
 			fi, err := d.Info()
