@@ -24,6 +24,12 @@ type State struct {
 	// LastParsedAt is the timestamp of the newest transcript entry we turned
 	// into heartbeats. Entries at or before it are skipped.
 	LastParsedAt time.Time `json:"last_parsed_at"`
+	// LastSyncAt is when a sync last ran, regardless of whether it found
+	// anything. It exists so a hook that fires on every tool call can decline
+	// cheaply instead of walking the transcript directory each time — the
+	// watermark alone cannot say that, because "nothing new" and "not looked
+	// yet" leave it identical.
+	LastSyncAt time.Time `json:"last_sync_at"`
 }
 
 // StatePath is where the watermark is stored.
