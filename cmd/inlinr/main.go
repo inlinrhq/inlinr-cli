@@ -37,8 +37,18 @@ func main() {
 	case "sync-commits":
 		os.Exit(runSyncCommits(os.Args[2:]))
 	case "sync-ai":
+		// Never exits non-zero.
+		//
+		// This is what a Claude Code Stop hook runs after every assistant turn,
+		// and a hook that fails interrupts the user's work. Time tracking is
+		// never worth that: an expired token, a network blip or a malformed
+		// transcript must cost a log line, not the turn someone was in the
+		// middle of.
+		//
+		// The failure still goes to stderr and to the log file, so it is
+		// diagnosable — it simply does not propagate.
 		if err := runSyncAI(os.Args[2:]); err != nil {
-			fail(err)
+			fmt.Fprintf(os.Stderr, "inlinr: %v\n", err)
 		}
 	case "doctor":
 		if err := runDoctor(os.Args[2:]); err != nil {
