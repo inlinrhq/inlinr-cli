@@ -7,6 +7,7 @@
 //	inlinr activate            run the Device flow and write a token to config
 //	inlinr heartbeat [flags]   enqueue a heartbeat (optionally flush) from a plugin
 //	inlinr sync-ai [flags]     parse AI assistant transcripts into heartbeats
+//	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
 //	inlinr doctor              print config + ping server
 //	inlinr --version
 package main
@@ -33,6 +34,8 @@ func main() {
 		if err := runHeartbeat(os.Args[2:]); err != nil {
 			fail(err)
 		}
+	case "sync-commits":
+		os.Exit(runSyncCommits(os.Args[2:]))
 	case "sync-ai":
 		if err := runSyncAI(os.Args[2:]); err != nil {
 			fail(err)
@@ -67,6 +70,9 @@ Usage:
   inlinr activate                 Run the Device flow to authorize this machine.
   inlinr heartbeat [flags]        Enqueue a heartbeat and flush the queue.
   inlinr sync-ai [flags]          Turn AI assistant transcripts into heartbeats.
+  inlinr sync-commits [flags]     Send line counts from local git history.
+                                  Counts only — no messages, no file paths.
+                                  Run it yourself; nothing calls it for you.
   inlinr signout                  Revoke this device token (server + local).
   inlinr upgrade                  Download and install the latest release.
   inlinr doctor                   Print config and check server connectivity.
