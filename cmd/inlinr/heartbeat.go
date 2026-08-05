@@ -47,6 +47,7 @@ func runHeartbeat(args []string) error {
 	aiCacheReadTokens := fs.Int64("ai-cache-read-tokens", -1, "cached input tokens re-read by the assistant")
 	aiCacheWriteTokens := fs.Int64("ai-cache-write-tokens", -1, "input tokens written to the assistant's prompt cache")
 	editor := fs.String("editor", "", "editor id (vscode, intellij, neovim, ...)")
+	editorVersion := fs.String("editor-version", "", "host editor version, e.g. 1.99.3 (not the plugin's)")
 	plugin := fs.String("plugin", "", "plugin user-agent, e.g. vscode-inlinr/0.1.0")
 	extraStdin := fs.Bool("extra-heartbeats", false, "read additional heartbeats as a JSON array from stdin")
 	configPath := fs.String("config", "", "path to config.toml (default: ~/.inlinr/config.toml)")
@@ -101,6 +102,7 @@ func runHeartbeat(args []string) error {
 		AICacheReadTokens:  int64PtrOrNil(*aiCacheReadTokens),
 		AICacheWriteTokens: int64PtrOrNil(*aiCacheWriteTokens),
 		Editor:             strPtr(*editor),
+		EditorVersion:      strPtr(*editorVersion),
 		Plugin:             strPtr(*plugin),
 	}
 

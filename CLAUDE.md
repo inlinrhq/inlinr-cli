@@ -131,9 +131,17 @@ If you edit any of the sections below, update the matching sections in the serve
   "ai_input_tokens":     412334,                     // optional — incl. cache create + cache read
   "ai_output_tokens":    8021,                       // optional
   "editor":              "vscode",                   // optional
+  "editor_version":      "1.99.3",                   // optional — the HOST editor's version
   "plugin":              "vscode-inlinr/0.1.0"       // optional — user-agent style
 }]
 ```
+
+`editor` and `editor_version` describe the host, `plugin` describes us. They are
+not interchangeable: every VS Code fork ships the same extension under the same
+`vscode-inlinr/x.y.z` user-agent, so `editor` is the only field that separates
+Cursor from Windsurf from stock VS Code. Inside a fork, `editor_version` is the
+*embedded VS Code build* — the forks don't expose their own release to
+extensions — so it reads as "which VS Code baseline", never "which Cursor".
 
 `category` also accepts `ai-coding`, used by `inlinr sync-ai` for time spent
 driving an assistant rather than typing.
