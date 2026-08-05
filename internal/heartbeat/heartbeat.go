@@ -51,5 +51,10 @@ type Heartbeat struct {
 	AICacheWriteTokens *int64 `json:"ai_cache_write_tokens,omitempty"`
 
 	Editor *string `json:"editor,omitempty"`
-	Plugin *string `json:"plugin,omitempty"` // user-agent e.g. vscode-inlinr/0.1.0
+	// Version of the editor hosting the plugin — not of the plugin itself,
+	// which travels in Plugin below. VS Code forks report the embedded VS Code
+	// build here, because that is the only version their extension API exposes:
+	// neither Cursor nor Windsurf publishes its own to extensions.
+	EditorVersion *string `json:"editor_version,omitempty"`
+	Plugin        *string `json:"plugin,omitempty"` // user-agent e.g. vscode-inlinr/0.1.0
 }
