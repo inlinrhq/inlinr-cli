@@ -160,6 +160,9 @@ Queue at `~/.inlinr/queue.db`.
 
 ## License
 
-BSD-3. See LICENSE. Portions of the plugin-facing CLI surface are modelled on
-[wakatime-cli](https://github.com/wakatime/wakatime-cli) (also BSD-3) to ease
-porting existing WakaTime editor plugins.
+BSD-3 — see [LICENSE](LICENSE).
+
+The plugin-facing surface — heartbeat field names, flag names, the per-beat
+response array — follows the [wakatime-cli](https://github.com/wakatime/wakatime-cli)
+convention, so an existing WakaTime editor plugin ports with little work. The
+compatibility is deliberate and it is a matter of interface.
