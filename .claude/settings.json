@@ -1,0 +1,76 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\"",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\" --throttle 120",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\" --throttle 120",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\" --throttle 120",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\"",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; f=/tmp/inlinr-claude-code.js; [ -s \"$f\" ] || curl -fsSL https://raw.githubusercontent.com/inlinrhq/inlinr-claude-code/main/dist/index.js -o \"$f\"; node \"$f\"",
+            "timeout": 20,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
