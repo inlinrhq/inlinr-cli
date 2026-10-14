@@ -187,3 +187,40 @@ func readHeadBranch(headPath string) string {
 	}
 	return strings.TrimSpace(branch)
 }
+
+// Root returns the working tree's top folder (the one holding `.git`), or ""
+// outside any repository.
+func Root(dir string) string {
+	gitPath := findGitPath(dir)
+	if gitPath == "" {
+		return ""
+	}
+	return filepath.Dir(gitPath)
+}
+
+// DefaultBranch returns the branch `origin/HEAD` points at, as recorded by
+// the clone. "" when it was never recorded (an `git init` + `remote add`
+// repository), which callers treat as "unknown", not as "no default".
+func DefaultBranch(dir string) string {
+	gitPath := findGitPath(dir)
+	if gitPath == "" {
+		return ""
+	}
+	gitDir := resolveGitDir(gitPath)
+	if gitDir == "" {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(commonDir(gitDir), "refs", "remotes", "origin", "HEAD"))
+	if err != nil {
+		return ""
+	}
+	rest, ok := strings.CutPrefix(strings.TrimSpace(string(data)), "ref:")
+	if !ok {
+		return ""
+	}
+	branch, ok := strings.CutPrefix(strings.TrimSpace(rest), "refs/remotes/origin/")
+	if !ok {
+		return ""
+	}
+	return branch
+}

@@ -8,6 +8,7 @@
 //	inlinr heartbeat [flags]   enqueue a heartbeat (optionally flush) from a plugin
 //	inlinr sync-ai [flags]     parse AI assistant transcripts into heartbeats
 //	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
+//	inlinr sync-deps [flags]   send npm manifests of a project followed on Inlinr
 //	inlinr doctor              print config + ping server
 //	inlinr --version
 package main
@@ -36,6 +37,12 @@ func main() {
 		}
 	case "sync-commits":
 		os.Exit(runSyncCommits(os.Args[2:]))
+	case "sync-deps":
+		// Spawned in the background by heartbeat: like sync-ai, a failure is a
+		// log line, never an exit code someone has to look at.
+		if err := runSyncDeps(os.Args[2:]); err != nil {
+			fmt.Fprintf(logSink, "inlinr: %v\n", err)
+		}
 	case "sync-ai":
 		// Never exits non-zero.
 		//
@@ -81,6 +88,7 @@ Usage:
   inlinr heartbeat [flags]        Enqueue a heartbeat and flush the queue.
   inlinr sync-ai [flags]          Turn AI assistant transcripts into heartbeats.
   inlinr sync-commits [flags]     Send line counts from local git history.
+  inlinr sync-deps [flags]        Send npm manifests, if the project's dependencies are followed.
                                   Counts only — no messages, no file paths.
                                   Run it yourself; nothing calls it for you.
   inlinr signout                  Revoke this device token (server + local).
