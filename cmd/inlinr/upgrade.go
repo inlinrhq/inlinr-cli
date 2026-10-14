@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	githubReleasesAPI    = "https://api.github.com/repos/inlinrhq/inlinr-cli/releases/latest"
+	githubReleasesAPI     = "https://api.github.com/repos/inlinrhq/inlinr-cli/releases/latest"
 	githubReleaseDownload = "https://github.com/inlinrhq/inlinr-cli/releases/download"
 )
 
