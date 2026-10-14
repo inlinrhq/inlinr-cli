@@ -105,6 +105,7 @@ func runHeartbeat(args []string) error {
 		EditorVersion:      strPtr(*editorVersion),
 		Plugin:             strPtr(*plugin),
 	}
+	warnUnknownAITool(&primary)
 
 	qp, err := config.QueuePath()
 	if err != nil {
@@ -194,6 +195,7 @@ func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int) error 
 		return fmt.Errorf("parse stdin JSON: %w", err)
 	}
 	for _, h := range beats {
+		warnUnknownAITool(&h)
 		ok, err := q.ShouldEmit(ctx, h, rateLimit)
 		if err != nil {
 			return err
@@ -209,6 +211,14 @@ func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int) error 
 		}
 	}
 	return nil
+}
+
+// warnUnknownAITool sends the beat without an ai_tool the server would
+// reject: one bad name must not cost the tracked time.
+func warnUnknownAITool(h *heartbeat.Heartbeat) {
+	if t := h.DropUnknownAITool(); t != "" {
+		fmt.Fprintf(os.Stderr, "inlinr: ignoring unknown ai tool %q\n", t)
+	}
 }
 
 func strPtr(s string) *string {
