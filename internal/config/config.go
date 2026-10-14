@@ -22,6 +22,11 @@ type Config struct {
 	Behavior struct {
 		HeartbeatRateLimitSeconds int `toml:"heartbeat_rate_limit_seconds"`
 		OfflineQueueMax           int `toml:"offline_queue_max"`
+		// DepsSync lets the heartbeat path check, once a day per repository,
+		// whether its owner follows its dependencies on Inlinr, and send the
+		// manifests when they do. Nothing is read for a project not followed.
+		// `deps_sync = false` turns the check itself off.
+		DepsSync bool `toml:"deps_sync"`
 	} `toml:"behavior"`
 	Logging struct {
 		Level string `toml:"level"`
@@ -34,6 +39,7 @@ func Defaults() Config {
 	var c Config
 	c.Behavior.HeartbeatRateLimitSeconds = 120
 	c.Behavior.OfflineQueueMax = 10_000
+	c.Behavior.DepsSync = true
 	c.Logging.Level = "info"
 	return c
 }

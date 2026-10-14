@@ -123,3 +123,24 @@ func TestResolveOutsideRepository(t *testing.T) {
 		t.Errorf("remote = %q, want empty outside a repository", got.Remote)
 	}
 }
+
+func TestRootAndDefaultBranch(t *testing.T) {
+	repo := t.TempDir()
+	write(t, filepath.Join(repo, ".git", "config"), config)
+	write(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/feature\n")
+	write(t, filepath.Join(repo, ".git", "refs", "remotes", "origin", "HEAD"), "ref: refs/remotes/origin/main\n")
+	sub := filepath.Join(repo, "src", "lib")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := Root(sub); got != repo {
+		t.Errorf("root = %q, want %q", got, repo)
+	}
+	if got := DefaultBranch(sub); got != "main" {
+		t.Errorf("default branch = %q, want main", got)
+	}
+	if got := DefaultBranch(t.TempDir()); got != "" {
+		t.Errorf("default branch outside a repo = %q", got)
+	}
+}

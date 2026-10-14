@@ -141,6 +141,10 @@ func runHeartbeat(args []string) error {
 		}
 	}
 
+	// After the beats are queued, before the network: the check only reads a
+	// small file, and spawning it here means a failed flush does not skip it.
+	maybeSyncDeps(cfg, *entity, *projectRemote)
+
 	return flush(ctx, q, cfg)
 }
 
