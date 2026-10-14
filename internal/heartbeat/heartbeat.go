@@ -58,3 +58,24 @@ type Heartbeat struct {
 	EditorVersion *string `json:"editor_version,omitempty"`
 	Plugin        *string `json:"plugin,omitempty"` // user-agent e.g. vscode-inlinr/0.1.0
 }
+
+// AITools is the ai_tool enum the server accepts. Anything else makes the
+// server reject the beat, and with it the time it carries.
+var AITools = []string{"copilot", "cursor", "claude-code", "codeium", "windsurf", "aider"}
+
+// DropUnknownAITool clears AITool when it is not in AITools and returns the
+// value it removed ("" when it kept it). The beat is still worth sending:
+// the time counts even when the assistant's name is wrong.
+func (h *Heartbeat) DropUnknownAITool() string {
+	if h.AITool == nil {
+		return ""
+	}
+	for _, t := range AITools {
+		if *h.AITool == t {
+			return ""
+		}
+	}
+	dropped := *h.AITool
+	h.AITool = nil
+	return dropped
+}
