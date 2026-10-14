@@ -133,6 +133,11 @@ inlinr heartbeat \
   --plugin vscode-inlinr/0.1.0 \
   --write
 inlinr doctor                       # diagnose config + connectivity
+inlinr upgrade                      # update this binary (SHA256-verified)
+inlinr signout                      # revoke this machine's token
+inlinr sync-commits                 # send local git line counts (opt-in)
+inlinr sync-deps                    # send npm manifests of a followed project
+inlinr --version
 ```
 
 ## Build
