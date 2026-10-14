@@ -6,17 +6,20 @@
 
 Go daemon that editor plugins spawn to send heartbeats. Owns: auth token storage, offline SQLite queue, batch upload, HTTP retry. Plugins never touch the network directly.
 
-It also owns **AI transcript parsing** (`inlinr sync-ai`, `internal/ai/`). Token
-counts and per-tool edit sizes only exist inside an assistant's own local
-session logs, so parsing them here means one implementation covers the terminal,
-the desktop app and every editor extension — the plugins stay dumb event pumps.
-Same split WakaTime uses: their Claude plugin passes three flags, all the
-parsers live in the CLI.
+It also has an **AI transcript parser** (`inlinr sync-ai`, `internal/ai/`).
+**Nothing calls it today.** The Claude Code plugin (`inlinrhq/inlinr-claude-code`,
+`src/transcript.ts` + `src/api.ts`) parses the same transcripts in TypeScript and
+posts to `/api/v1/heartbeats` itself, without this binary. So there are two
+parsers of the same format, and a fix in one is not a fix in the other. Pick one
+before adding a second assistant (Codex, Gemini, opencode): either the plugin
+calls `inlinr sync-ai`, or this command goes.
 
 Sibling repos:
-- `inlinrhq/my.inlinr.com` — server (ingest + dashboard). Source of truth for the wire contract below.
+- `inlinrhq/inlinr-web` — server (ingest + dashboard). Source of truth for the wire contract below.
 - `inlinrhq/inlinr-vscode` — VS Code plugin that spawns this binary.
-- `inlinrhq/inlinr-intellij` — JetBrains plugin (same).
+- `inlinrhq/inlinr-claude-code` — Claude Code plugin. Does **not** spawn this
+  binary; it shares only `~/.inlinr/config.toml` (the device token).
+- No JetBrains or Neovim plugin exists yet (both are "considering" on the roadmap).
 
 ---
 
@@ -37,6 +40,11 @@ cmd/inlinr/              # subcommand entry points
   activate.go            # Device flow
   heartbeat.go           # the hot path — plugins call this 100× a day
   doctor.go              # config dump + server ping
+  signout.go             # revoke this device's token
+  upgrade.go             # self-update from GitHub Releases (SHA256-verified)
+  syncai.go              # `inlinr sync-ai` (see below)
+  synccommits.go         # `inlinr sync-commits` — commits from any git host
+  syncdeps.go            # `inlinr sync-deps` — manifests for dependency tracking
 internal/
   config/                # ~/.inlinr/config.toml load/save
   device/                # OAuth 2.0 Device Grant client
@@ -45,6 +53,8 @@ internal/
   queue/                 # SQLite-backed FIFO
   ai/                    # assistant transcript parsers + sync watermark/lock
   gitctx/                # remote + branch from .git (worktree-aware)
+  commits/               # git log reader for sync-commits
+  deps/                  # manifest + lockfile reader for sync-deps
 ```
 
 ### `inlinr sync-ai`
@@ -57,9 +67,11 @@ inlinr sync-ai [--plugin claude-code-inlinr/0.1.0] [--project-folder <dir>] [--d
 ```
 
 Three details that matter, all learned from real transcripts:
-- **Input tokens include cache creation and cache reads.** Most of a Claude Code
-  turn is cached context; counting only `input_tokens` under-reports by an order
-  of magnitude.
+- **Cache tokens are counted, and kept apart.** Most of a Claude Code turn is
+  cached context; counting only `input_tokens` under-reports by an order of
+  magnitude. Cache reads and cache writes are billed at very different rates, so
+  they travel as `ai_cache_read_tokens` / `ai_cache_write_tokens`, and
+  `ai_input_tokens` is the uncached input only.
 - **Streaming duplicates replace, they don't accumulate.** The same `message.id`
   is logged repeatedly with running totals; summing them multiplies every
   response's cost by its chunk count.
@@ -104,7 +116,8 @@ inlinr sync-deps [--dir <folder>] [--remote <url>] [--force] [--dry-run]
   and some antivirus engines heuristically flag unsigned Go binaries. Fixing it
   needs a paid Authenticode certificate, not a workflow change — see the
   Downloads section of README.md.
-- Plugins auto-download from GitHub Releases and verify against SHA256SUMS.txt.
+- The VS Code extension auto-downloads from GitHub Releases and verifies against
+  SHA256SUMS.txt. The Claude Code plugin does not use the binary.
 
 ## Version injection
 
@@ -112,7 +125,7 @@ inlinr sync-deps [--dir <folder>] [--remote <url>] [--force] [--dry-run]
 
 ---
 
-## Contract (sync with `inlinrhq/my.inlinr.com` — verify before changing)
+## Contract (sync with `inlinrhq/inlinr-web` — verify before changing)
 
 If you edit any of the sections below, update the matching sections in the server repo and in every plugin repo's CLAUDE.md.
 
@@ -151,7 +164,9 @@ If you edit any of the sections below, update the matching sections in the serve
   "ai_lines_deleted":    1,                          // optional
   "ai_session":          "9f2c1ab0-...",             // optional — one assistant conversation
   "ai_model":            "claude-opus-5",            // optional
-  "ai_input_tokens":     412334,                     // optional — incl. cache create + cache read
+  "ai_input_tokens":     41233,                      // optional — uncached input only
+  "ai_cache_read_tokens":  371101,                   // optional — context re-read from the prompt cache
+  "ai_cache_write_tokens": 9120,                     // optional — context written to the prompt cache
   "ai_output_tokens":    8021,                       // optional
   "editor":              "vscode",                   // optional
   "editor_version":      "1.99.3",                   // optional — the HOST editor's version
@@ -169,7 +184,11 @@ extensions — so it reads as "which VS Code baseline", never "which Cursor".
 `category` also accepts `ai-coding`, used by `inlinr sync-ai` for time spent
 driving an assistant rather than typing.
 
-Token fields come only from `inlinr sync-ai`; editor plugins never send them.
+Token fields come from assistant transcripts (today the Claude Code plugin;
+`inlinr sync-ai` can produce them too). The VS Code extension never sends them.
+
+The server no longer stores `lineno`, `cursorpos` or `lines` (nothing read them).
+They are still accepted, so older binaries keep working.
 
 Response: `{ "responses": [[{"id":"hb_0"}, 201], ...], "accepted": N }`. Per-beat status array lets the CLI dequeue precisely.
 
