@@ -1,4 +1,13 @@
 {
+  "extraKnownMarketplaces": {
+    "inlinr": {
+      "source": {
+        "source": "github",
+        "repo": "inlinrhq/inlinr-claude-code"
+      },
+      "autoUpdate": true
+    }
+  },
   "hooks": {
     "SessionStart": [
       {
