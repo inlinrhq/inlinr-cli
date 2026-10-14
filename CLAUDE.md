@@ -70,6 +70,29 @@ Safe to call on every assistant turn: a watermark in `~/.inlinr/ai-sync.json`
 means only new lines are read, and a lock in `~/.inlinr/ai-sync.lock` stops two
 editors double-counting. Sessions outside a git repository are skipped.
 
+### `inlinr sync-deps`
+
+Sends a repository's npm manifests to Inlinr's dependency tracking, for
+projects whose owner turned it on in the dashboard. It is the only way a
+private repository, or one not on GitHub, is read: the server never asks
+GitHub for the `repo` scope. Code in `internal/deps/`.
+
+```sh
+inlinr sync-deps [--dir <folder>] [--remote <url>] [--force] [--dry-run]
+```
+
+- `heartbeat` spawns it, detached, when `~/.inlinr/deps-sync.json` says the
+  repository is due: at most once a day per remote, one small file read
+  otherwise. `deps_sync = false` under `[behavior]` turns it off.
+- It asks `GET /api/v1/deps/status` first and sends nothing unless the answer
+  is `wanted`. A project not followed is never read.
+- Default branch only (`origin/HEAD`, else main/master).
+- What leaves the machine: the dependency fields of each package.json (name,
+  version, the four dependency blocks, workspaces, catalogs), the pnpm
+  workspace file, and one installed version per direct dependency, read from
+  pnpm-lock.yaml, package-lock.json, bun.lock or yarn.lock. Never scripts,
+  never the transitive tree.
+
 ## Build & distribution
 
 - `make build` → `bin/inlinr` (native).
@@ -155,6 +178,23 @@ Retry semantics:
 - 400 → discard (malformed, no point retrying).
 - 401 → stop, surface "re-authenticate" to the user.
 - 5xx / network error → leave in queue, try next invocation.
+
+### Dependency manifests (sync-deps)
+
+```jsonc
+// GET /api/v1/deps/status?project_git_remote=<url>
+{ "wanted": true, "check_after": 86400 }
+
+// POST /api/v1/deps/manifests
+{
+  "project_git_remote": "git@github.com:you/r.git",
+  "root_path": "package.json",                      // relative, ends in package.json
+  "manifests": [{ "path": "apps/web/package.json", "content": "{...}" }], // ≤ 61
+  "pnpm_workspace": "packages:\n  - apps/*\n",       // optional
+  "installed": { "apps/web/package.json": { "react": "19.1.0" } } // optional
+}
+// 200 { "stored": N, "unreadable": [...] } · 409 tracking is off · 404 unknown project
+```
 
 ### AI tool enum (on the wire)
 

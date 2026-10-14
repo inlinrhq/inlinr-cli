@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/inlinrhq/inlinr-cli/internal/commits"
@@ -162,4 +163,75 @@ func (c *Client) SendCommits(ctx context.Context, remote string, list []commits.
 		return nil, fmt.Errorf("decode commits response: %w", err)
 	}
 	return &out, nil
+}
+
+// DepsStatus is the answer of GET /api/v1/deps/status.
+type DepsStatus struct {
+	// Wanted: the owner follows this project's dependencies and the server
+	// wants a fresh read. False for every project not followed.
+	Wanted bool `json:"wanted"`
+	// CheckAfter: seconds before asking about this repository again.
+	CheckAfter int `json:"check_after"`
+}
+
+// GetDepsStatus asks whether to send this repository's manifests.
+func (c *Client) GetDepsStatus(ctx context.Context, remote string) (*DepsStatus, error) {
+	u := c.BaseURL + "/api/v1/deps/status?project_git_remote=" + url.QueryEscape(remote)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.DeviceToken)
+	req.Header.Set("User-Agent", c.UserAgent)
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrTransient, err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		var s DepsStatus
+		if err := json.Unmarshal(body, &s); err != nil {
+			return nil, fmt.Errorf("decode deps status: %w", err)
+		}
+		return &s, nil
+	case resp.StatusCode == http.StatusUnauthorized:
+		return nil, ErrAuth
+	case resp.StatusCode >= 500:
+		return nil, fmt.Errorf("%w: deps status returned %d", ErrTransient, resp.StatusCode)
+	default:
+		return nil, fmt.Errorf("deps status returned %d: %s", resp.StatusCode, string(body))
+	}
+}
+
+// SendManifests posts a repository's manifests (see internal/deps).
+func (c *Client) SendManifests(ctx context.Context, upload any) error {
+	body, err := json.Marshal(upload)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/api/v1/deps/manifests", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.DeviceToken)
+	req.Header.Set("User-Agent", c.UserAgent)
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrTransient, err)
+	}
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		return nil
+	case resp.StatusCode == http.StatusUnauthorized:
+		return ErrAuth
+	case resp.StatusCode >= 500:
+		return fmt.Errorf("%w: manifests returned %d", ErrTransient, resp.StatusCode)
+	default:
+		return fmt.Errorf("manifests returned %d: %s", resp.StatusCode, string(respBody))
+	}
 }
