@@ -1,9 +1,9 @@
 // Package gitctx resolves the git remote and branch of a directory by reading
 // the git metadata directly.
 //
-// Editor plugins get this from their host's git integration, but `inlinr
-// sync-ai` runs with nothing but a working directory taken from an assistant
-// transcript, so it has to do the lookup itself.
+// Editor plugins get this from their host's git integration, but
+// `sync-commits` and `sync-deps` run with nothing but a directory, so they
+// have to do the lookup themselves.
 //
 // Handles worktrees: in a `git worktree` checkout `.git` is a *file* pointing
 // at `<repo>/.git/worktrees/<name>`, whose `commondir` points back at the
