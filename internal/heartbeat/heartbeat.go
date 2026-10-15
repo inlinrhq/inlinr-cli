@@ -38,7 +38,7 @@ type Heartbeat struct {
 
 	// --- AI session -------------------------------------------------------
 	// Groups the beats belonging to one assistant conversation, and carries
-	// its token usage. Populated by `inlinr sync-ai`, which reads the
+	// its token usage. Sent by the Claude Code plugin, which reads the
 	// assistant's own local transcripts — the only place these numbers exist.
 	AISession      *string `json:"ai_session,omitempty"`
 	AIModel        *string `json:"ai_model,omitempty"`

@@ -6,13 +6,14 @@
 
 Go daemon that editor plugins spawn to send heartbeats. Owns: auth token storage, offline SQLite queue, batch upload, HTTP retry. Plugins never touch the network directly.
 
-It also has an **AI transcript parser** (`inlinr sync-ai`, `internal/ai/`).
-**Nothing calls it today.** The Claude Code plugin (`inlinrhq/inlinr-claude-code`,
-`src/transcript.ts` + `src/api.ts`) parses the same transcripts in TypeScript and
-posts to `/api/v1/heartbeats` itself, without this binary. So there are two
-parsers of the same format, and a fix in one is not a fix in the other. Pick one
-before adding a second assistant (Codex, Gemini, opencode): either the plugin
-calls `inlinr sync-ai`, or this command goes.
+AI assistant transcripts are **not** parsed here. The Claude Code plugin
+(`inlinrhq/inlinr-claude-code`, `src/transcript.ts` + `src/api.ts`) reads them
+and posts to `/api/v1/heartbeats` itself. This binary used to carry a second
+parser (`inlinr sync-ai`) that nothing called; it was removed so a fix only has
+one place to go. `sync-ai` survives as a no-op that exits 0, because early
+plugin releases ran it from a Claude Code Stop hook and a failing hook
+interrupts the user's turn. A new assistant (Codex, Gemini, opencode) gets its
+parser next to the Claude Code one, not here.
 
 Sibling repos:
 - `inlinrhq/inlinr-web` — server (ingest + dashboard). Source of truth for the wire contract below.
@@ -42,7 +43,6 @@ cmd/inlinr/              # subcommand entry points
   doctor.go              # config dump + server ping
   signout.go             # revoke this device's token
   upgrade.go             # self-update from GitHub Releases (SHA256-verified)
-  syncai.go              # `inlinr sync-ai` (see below)
   synccommits.go         # `inlinr sync-commits` — commits from any git host
   syncdeps.go            # `inlinr sync-deps` — manifests for dependency tracking
 internal/
@@ -51,36 +51,10 @@ internal/
   api/                   # HTTP client for the ingest endpoint
   heartbeat/             # wire struct (snake_case JSON)
   queue/                 # SQLite-backed FIFO
-  ai/                    # assistant transcript parsers + sync watermark/lock
   gitctx/                # remote + branch from .git (worktree-aware)
   commits/               # git log reader for sync-commits
   deps/                  # manifest + lockfile reader for sync-deps
 ```
-
-### `inlinr sync-ai`
-
-Parses AI assistant transcripts into heartbeats. Claude Code today
-(`~/.claude/projects/**/*.jsonl`); one file per assistant under `internal/ai/`.
-
-```sh
-inlinr sync-ai [--plugin claude-code-inlinr/0.1.0] [--project-folder <dir>] [--dry-run]
-```
-
-Three details that matter, all learned from real transcripts:
-- **Cache tokens are counted, and kept apart.** Most of a Claude Code turn is
-  cached context; counting only `input_tokens` under-reports by an order of
-  magnitude. Cache reads and cache writes are billed at very different rates, so
-  they travel as `ai_cache_read_tokens` / `ai_cache_write_tokens`, and
-  `ai_input_tokens` is the uncached input only.
-- **Streaming duplicates replace, they don't accumulate.** The same `message.id`
-  is logged repeatedly with running totals; summing them multiplies every
-  response's cost by its chunk count.
-- **A `filePath` is not a write.** The Read tool reports one too. Only a
-  `structuredPatch`, a `newString`/`oldString`, or a create/update/delete counts.
-
-Safe to call on every assistant turn: a watermark in `~/.inlinr/ai-sync.json`
-means only new lines are read, and a lock in `~/.inlinr/ai-sync.lock` stops two
-editors double-counting. Sessions outside a git repository are skipped.
 
 ### `inlinr sync-deps`
 
@@ -181,11 +155,11 @@ Cursor from Windsurf from stock VS Code. Inside a fork, `editor_version` is the
 *embedded VS Code build* — the forks don't expose their own release to
 extensions — so it reads as "which VS Code baseline", never "which Cursor".
 
-`category` also accepts `ai-coding`, used by `inlinr sync-ai` for time spent
-driving an assistant rather than typing.
+`category` also accepts `ai-coding`, used by the Claude Code plugin for time
+spent driving an assistant rather than typing.
 
-Token fields come from assistant transcripts (today the Claude Code plugin;
-`inlinr sync-ai` can produce them too). The VS Code extension never sends them.
+Token fields come from assistant transcripts, sent by the Claude Code plugin.
+The VS Code extension never sends them.
 
 The server no longer stores `lineno`, `cursorpos` or `lines` (nothing read them).
 They are still accepted, so older binaries keep working.
