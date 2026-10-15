@@ -137,8 +137,31 @@ inlinr upgrade                      # update this binary (SHA256-verified)
 inlinr signout                      # revoke this machine's token
 inlinr sync-commits                 # send local git line counts (opt-in)
 inlinr sync-deps                    # send npm manifests of a followed project
+inlinr mcp                          # serve Inlinr's tools to an AI assistant (MCP)
 inlinr --version
 ```
+
+### In an AI assistant (MCP)
+
+`inlinr mcp` lets Claude Code, Cursor, Claude Desktop or any MCP client ask
+Inlinr about your time and your dependencies. Sign in once with
+`inlinr activate`, then add it to the assistant:
+
+```sh
+claude mcp add inlinr -- inlinr mcp
+```
+
+or, in a client's JSON config:
+
+```json
+{ "mcpServers": { "inlinr": { "command": "inlinr", "args": ["mcp"] } } }
+```
+
+Tools: `time_summary` (time by project and language, AI time and cost),
+`log_time` (a manual entry), `check_dependencies` (the package.json in the
+folder the assistant runs in; only its four dependency blocks are sent),
+`package_releases` and `upgrade_notes`. The package tools work without
+signing in.
 
 ## Build
 

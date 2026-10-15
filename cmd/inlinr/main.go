@@ -9,6 +9,7 @@
 //	inlinr sync-ai [flags]     parse AI assistant transcripts into heartbeats
 //	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
 //	inlinr sync-deps [flags]   send npm manifests of a project followed on Inlinr
+//	inlinr mcp                 serve the Model Context Protocol to an AI assistant
 //	inlinr doctor              print config + ping server
 //	inlinr --version
 package main
@@ -57,6 +58,10 @@ func main() {
 		if err := runSyncAI(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "inlinr: %v\n", err)
 		}
+	case "mcp":
+		if err := runMCP(os.Args[2:]); err != nil {
+			fail(err)
+		}
 	case "doctor":
 		if err := runDoctor(os.Args[2:]); err != nil {
 			fail(err)
@@ -91,6 +96,7 @@ Usage:
   inlinr sync-deps [flags]        Send npm manifests, if the project's dependencies are followed.
                                   Counts only — no messages, no file paths.
                                   Run it yourself; nothing calls it for you.
+  inlinr mcp                      Serve Inlinr's tools to an AI assistant over stdio (MCP).
   inlinr signout                  Revoke this device token (server + local).
   inlinr upgrade                  Download and install the latest release.
   inlinr doctor                   Print config and check server connectivity.
