@@ -45,6 +45,7 @@ cmd/inlinr/              # subcommand entry points
   upgrade.go             # self-update from GitHub Releases (SHA256-verified)
   synccommits.go         # `inlinr sync-commits` — commits from any git host
   syncdeps.go            # `inlinr sync-deps` — manifests for dependency tracking
+  mcp.go                 # `inlinr mcp` — MCP server over stdio
 internal/
   config/                # ~/.inlinr/config.toml load/save
   device/                # OAuth 2.0 Device Grant client
@@ -54,6 +55,7 @@ internal/
   gitctx/                # remote + branch from .git (worktree-aware)
   commits/               # git log reader for sync-commits
   deps/                  # manifest + lockfile reader for sync-deps
+  mcp/                   # MCP protocol (JSON-RPC over stdio) + tools
 ```
 
 ### `inlinr sync-deps`
@@ -78,6 +80,32 @@ inlinr sync-deps [--dir <folder>] [--remote <url>] [--force] [--dry-run]
   workspace file, and one installed version per direct dependency, read from
   pnpm-lock.yaml, package-lock.json, bun.lock or yarn.lock. Never scripts,
   never the transitive tree.
+
+### `inlinr mcp`
+
+A Model Context Protocol server for AI assistants, over stdio: JSON-RPC 2.0,
+one message per line. Stdlib only, no MCP SDK: a tools-only server needs
+initialize, ping, tools/list and tools/call, and nothing else. Code in
+`internal/mcp/`.
+
+| Tool | Calls |
+|---|---|
+| `time_summary` | `GET /api/v1/me/summary?period&from&to&project` (device token) |
+| `log_time` | `POST /api/v1/me/entries` (device token) |
+| `check_dependencies` | `POST /api/v1/check` |
+| `package_releases` | `GET /api/v1/packages/<name>/releases` |
+| `upgrade_notes` | `GET /api/v1/packages/<name>/upgrade?from&to` |
+
+- Stdout is the protocol. Anything for a person goes to stderr, or a client
+  reads it as a broken message.
+- Without a token it still starts: the package tools are public, and the
+  account tools answer with "run `inlinr activate`".
+- `check_dependencies` reads the package.json of the folder the assistant
+  started it in and sends only the four dependency blocks, never scripts or
+  the package name.
+- A package name must match npm's own rule before it goes in a URL path.
+- An API error comes back as a tool result with `isError`, carrying the
+  server's message, so the assistant can tell the user instead of retrying.
 
 ## Build & distribution
 
