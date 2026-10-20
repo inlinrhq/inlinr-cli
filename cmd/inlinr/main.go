@@ -6,7 +6,6 @@
 //
 //	inlinr activate            run the Device flow and write a token to config
 //	inlinr heartbeat [flags]   enqueue a heartbeat (optionally flush) from a plugin
-//	inlinr sync-ai [flags]     parse AI assistant transcripts into heartbeats
 //	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
 //	inlinr sync-deps [flags]   send npm manifests of a project followed on Inlinr
 //	inlinr mcp                 serve the Model Context Protocol to an AI assistant
@@ -39,25 +38,17 @@ func main() {
 	case "sync-commits":
 		os.Exit(runSyncCommits(os.Args[2:]))
 	case "sync-deps":
-		// Spawned in the background by heartbeat: like sync-ai, a failure is a
-		// log line, never an exit code someone has to look at.
+		// Spawned in the background by heartbeat: a failure is a log line,
+		// never an exit code someone has to look at.
 		if err := runSyncDeps(os.Args[2:]); err != nil {
 			fmt.Fprintf(logSink, "inlinr: %v\n", err)
 		}
 	case "sync-ai":
-		// Never exits non-zero.
-		//
-		// This is what a Claude Code Stop hook runs after every assistant turn,
-		// and a hook that fails interrupts the user's work. Time tracking is
-		// never worth that: an expired token, a network blip or a malformed
-		// transcript must cost a log line, not the turn someone was in the
-		// middle of.
-		//
-		// The failure still goes to stderr and to the log file, so it is
-		// diagnosable — it simply does not propagate.
-		if err := runSyncAI(os.Args[2:]); err != nil {
-			fmt.Fprintf(os.Stderr, "inlinr: %v\n", err)
-		}
+		// Retired: the Claude Code plugin parses its own transcripts now and
+		// never calls this binary. The command stays as a no-op because early
+		// plugin releases ran it from a Stop hook, and a hook that exits
+		// non-zero interrupts the user's turn. It must keep exiting 0.
+		fmt.Fprintln(os.Stderr, "inlinr: sync-ai is retired; update the Inlinr plugin for Claude Code, which tracks AI sessions itself")
 	case "mcp":
 		if err := runMCP(os.Args[2:]); err != nil {
 			fail(err)
@@ -91,7 +82,6 @@ func usage() {
 Usage:
   inlinr activate                 Run the Device flow to authorize this machine.
   inlinr heartbeat [flags]        Enqueue a heartbeat and flush the queue.
-  inlinr sync-ai [flags]          Turn AI assistant transcripts into heartbeats.
   inlinr sync-commits [flags]     Send line counts from local git history.
   inlinr sync-deps [flags]        Send npm manifests, if the project's dependencies are followed.
                                   Counts only — no messages, no file paths.
