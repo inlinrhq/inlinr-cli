@@ -182,9 +182,16 @@ device_token = "in_d_..."
 [behavior]
 heartbeat_rate_limit_seconds = 120
 offline_queue_max = 10000
+error_reports = true   # false: never send the CLI's own errors to Inlinr
 ```
 
 Queue at `~/.inlinr/queue.db`.
+
+When a command a plugin started fails on its own (a queue it cannot open, an
+upgrade whose checksum does not match, a crash), the CLI tells Inlinr, at most
+once a day for the same error: the command, the message with your home folder
+replaced by `~`, the CLI version, operating system and editor. No token, no
+file content. Network failures and server errors are never sent.
 
 ## License
 

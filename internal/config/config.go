@@ -27,6 +27,10 @@ type Config struct {
 		// manifests when they do. Nothing is read for a project not followed.
 		// `deps_sync = false` turns the check itself off.
 		DepsSync bool `toml:"deps_sync"`
+		// ErrorReports sends the CLI's own failures to Inlinr (see
+		// internal/report): no token, no file content, the home folder
+		// replaced by "~". `error_reports = false` turns it off.
+		ErrorReports bool `toml:"error_reports"`
 	} `toml:"behavior"`
 	Logging struct {
 		Level string `toml:"level"`
@@ -40,6 +44,7 @@ func Defaults() Config {
 	c.Behavior.HeartbeatRateLimitSeconds = 120
 	c.Behavior.OfflineQueueMax = 10_000
 	c.Behavior.DepsSync = true
+	c.Behavior.ErrorReports = true
 	c.Logging.Level = "info"
 	return c
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/inlinrhq/inlinr-cli/internal/config"
 	"github.com/inlinrhq/inlinr-cli/internal/deps"
 	"github.com/inlinrhq/inlinr-cli/internal/gitctx"
+	"github.com/inlinrhq/inlinr-cli/internal/report"
 )
 
 // retryAfter is how soon a repository is looked at again when the check did
@@ -106,7 +106,7 @@ func runSyncDeps(args []string) error {
 		return err
 	}
 	if cfg.Auth.DeviceToken == "" {
-		return errors.New("not activated, run 'inlinr activate' first")
+		return report.Quiet("not activated, run 'inlinr activate' first")
 	}
 	// Claimed before the network call, so a slow server cannot make every
 	// heartbeat in the meantime spawn another check.
