@@ -16,6 +16,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=...".
@@ -26,6 +27,16 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
+	// A crash in a command a plugin spawned is reported, then crashes as
+	// it would have.
+	defer func() {
+		if v := recover(); v != nil {
+			if reportedCommands[os.Args[1]] {
+				reporter().Panic(os.Args[1], v, debug.Stack())
+			}
+			panic(v)
+		}
+	}()
 	switch os.Args[1] {
 	case "activate":
 		if err := runActivate(os.Args[2:]); err != nil {
@@ -42,6 +53,7 @@ func main() {
 		// never an exit code someone has to look at.
 		if err := runSyncDeps(os.Args[2:]); err != nil {
 			fmt.Fprintf(logSink, "inlinr: %v\n", err)
+			reportFailure("sync-deps", err)
 		}
 	case "sync-ai":
 		// Retired: the Claude Code plugin parses its own transcripts now and
@@ -98,5 +110,6 @@ Run 'inlinr heartbeat --help' for the full heartbeat flag list.
 
 func fail(err error) {
 	fmt.Fprintf(os.Stderr, "inlinr: %v\n", err)
+	reportFailure(os.Args[1], err)
 	os.Exit(1)
 }

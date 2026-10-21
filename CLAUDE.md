@@ -107,6 +107,19 @@ initialize, ping, tools/list and tools/call, and nothing else. Code in
 - An API error comes back as a tool result with `isError`, carrying the
   server's message, so the assistant can tell the user instead of retrying.
 
+### Error reports
+
+`heartbeat`, `sync-deps`, `upgrade` and `mcp` run unattended, so a failure
+there is sent to `POST /api/v1/plugin-errors` and shows in Admin → Errors on
+inlinr.com. Code in `internal/report/`.
+
+- Not sent: no network, a 5xx, a dead token, a refused batch (the server notes
+  refusals itself), anything wrapped in `report.Quiet` (the user's to fix), a
+  bad flag. A panic is sent with its stack, then crashes as before.
+- The same error at most once a day per machine (`~/.inlinr/error-reports.json`).
+- The home folder becomes `~`; no token, nothing about who. A `dev` build sends
+  nothing. `error_reports = false` under `[behavior]` turns it off.
+
 ## Build & distribution
 
 - `make build` → `bin/inlinr` (native).

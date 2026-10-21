@@ -14,6 +14,7 @@ import (
 	"github.com/inlinrhq/inlinr-cli/internal/config"
 	"github.com/inlinrhq/inlinr-cli/internal/heartbeat"
 	"github.com/inlinrhq/inlinr-cli/internal/queue"
+	"github.com/inlinrhq/inlinr-cli/internal/report"
 )
 
 const batchSize = 25
@@ -72,8 +73,10 @@ func runHeartbeat(args []string) error {
 	if err != nil {
 		return err
 	}
+	rep = newReporter(cfg)
+	rep.Editor = *editor
 	if cfg.Auth.DeviceToken == "" {
-		return errors.New("not activated — run 'inlinr activate' first")
+		return report.Quiet("not activated — run 'inlinr activate' first")
 	}
 
 	primary := heartbeat.Heartbeat{
@@ -174,7 +177,7 @@ func flush(ctx context.Context, q *queue.Queue, cfg config.Config) error {
 			return err
 		case errors.Is(err, api.ErrAuth):
 			// Token dead — stop flushing, surface error to user.
-			return fmt.Errorf("token rejected (401): run 'inlinr activate' to re-auth")
+			return report.Quiet("token rejected (401): run 'inlinr activate' to re-auth")
 		default:
 			// Transient — leave in queue, try again next invocation.
 			return fmt.Errorf("send failed, beats requeued: %w", err)
@@ -214,10 +217,12 @@ func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int) error 
 }
 
 // warnUnknownAITool sends the beat without an ai_tool the server would
-// reject: one bad name must not cost the tracked time.
+// reject: one bad name must not cost the tracked time. It is a plugin
+// passing a name the CLI does not know, so it is reported too.
 func warnUnknownAITool(h *heartbeat.Heartbeat) {
 	if t := h.DropUnknownAITool(); t != "" {
 		fmt.Fprintf(os.Stderr, "inlinr: ignoring unknown ai tool %q\n", t)
+		reporter().Message("heartbeat", fmt.Sprintf("ignoring unknown ai tool %q", t))
 	}
 }
 
