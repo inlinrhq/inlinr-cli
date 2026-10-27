@@ -9,14 +9,17 @@ type Heartbeat struct {
 	Entity           string  `json:"entity"`
 	Type             string  `json:"type,omitempty"` // "file" (default), "app", "domain"
 	Time             float64 `json:"time"`           // unix seconds, fractional ms ok
-	ProjectGitRemote string  `json:"project_git_remote"`
-	Branch           *string `json:"branch,omitempty"`
-	Language         *string `json:"language,omitempty"`
-	Category         *string `json:"category,omitempty"` // coding|debugging|building|code-reviewing|writing-tests|ai-coding
-	IsWrite          bool    `json:"is_write,omitempty"`
-	LineNumber       *int    `json:"lineno,omitempty"`
-	CursorPos        *int    `json:"cursorpos,omitempty"`
-	Lines            *int    `json:"lines,omitempty"`
+	ProjectGitRemote string  `json:"project_git_remote,omitempty"`
+	// The folder's name, for a folder with no git remote. The server needs
+	// one of the two; the remote wins when both are sent.
+	Project    string  `json:"project,omitempty"`
+	Branch     *string `json:"branch,omitempty"`
+	Language   *string `json:"language,omitempty"`
+	Category   *string `json:"category,omitempty"` // coding|debugging|building|code-reviewing|writing-tests|ai-coding
+	IsWrite    bool    `json:"is_write,omitempty"`
+	LineNumber *int    `json:"lineno,omitempty"`
+	CursorPos  *int    `json:"cursorpos,omitempty"`
+	Lines      *int    `json:"lines,omitempty"`
 
 	// --- Authorship -------------------------------------------------------
 	// Which assistant produced this edit, if any. Set only when there is
