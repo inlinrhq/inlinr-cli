@@ -207,6 +207,37 @@ var defs = []toolDef{
 		},
 		run: (*Tools).upgradeNotes,
 	},
+	{
+		Tool: Tool{
+			Name:  "my_upgrades",
+			Title: "What to upgrade",
+			Description: "The user's Upgrades list from Inlinr, for the projects whose dependencies they follow: security fixes first, then deprecated packages, " +
+				"majors and the rest, each with the version to go from and to, the projects that declare it and the page that says what changes. " +
+				"Use it for \"what should I upgrade\"; then upgrade_notes for one package, and find_usages to see where the code uses it.",
+			InputSchema: obj(map[string]any{
+				"project":     str("A project name or its git remote. Leave it out for every followed project."),
+				"include_dev": map[string]any{"type": "boolean", "description": "Count dev dependencies. Default true."},
+				"limit":       map[string]any{"type": "integer", "minimum": 1, "maximum": 200, "description": "Upgrades to return, most urgent first. Default 50."},
+			}),
+			Annotations: readOnly,
+		},
+		run: (*Tools).myUpgrades,
+	},
+	{
+		Tool: Tool{
+			Name:  "find_usages",
+			Title: "Where a package is used",
+			Description: "Lists the lines of this codebase that import or require an npm package (or one of its subpaths), so an upgrade can be checked against them. " +
+				"Searched on this machine only; nothing is sent. Skips node_modules, build output and hidden folders.",
+			InputSchema: obj(map[string]any{
+				"name": str("The npm package name."),
+				"dir":  str("Folder to search, relative to the one the assistant runs in. Defaults to that folder."),
+				"max":  map[string]any{"type": "integer", "minimum": 1, "maximum": 1000, "description": "Lines to return. Default 200."},
+			}, "name"),
+			Annotations: map[string]any{"readOnlyHint": true, "openWorldHint": false},
+		},
+		run: (*Tools).findUsages,
+	},
 }
 
 // List returns the tools for tools/list.
@@ -424,4 +455,29 @@ func (t *Tools) upgradeNotes(ctx context.Context, args json.RawMessage) Result {
 		q.Set("to", a.To)
 	}
 	return t.answer(ctx, http.MethodGet, "/api/v1/packages/"+a.Name+"/upgrade", q, nil)
+}
+
+func (t *Tools) myUpgrades(ctx context.Context, args json.RawMessage) Result {
+	var a struct {
+		Project    string `json:"project"`
+		IncludeDev *bool  `json:"include_dev"`
+		Limit      int    `json:"limit"`
+	}
+	if err := decode(args, &a); err != nil {
+		return failure("Bad arguments: %v", err)
+	}
+	if !t.Backend.SignedIn() {
+		return failure(signInFirst)
+	}
+	q := url.Values{}
+	if a.Project != "" {
+		q.Set("project", a.Project)
+	}
+	if a.IncludeDev != nil && !*a.IncludeDev {
+		q.Set("dev", "0")
+	}
+	if a.Limit > 0 {
+		q.Set("limit", strconv.Itoa(a.Limit))
+	}
+	return t.answer(ctx, http.MethodGet, "/api/v1/me/upgrades", q, nil)
 }

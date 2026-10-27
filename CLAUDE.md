@@ -96,6 +96,8 @@ initialize, ping, tools/list and tools/call, and nothing else. Code in
 | `check_dependencies` | `POST /api/v1/check` |
 | `package_releases` | `GET /api/v1/packages/<name>/releases` |
 | `upgrade_notes` | `GET /api/v1/packages/<name>/upgrade?from&to` |
+| `my_upgrades` | `GET /api/v1/me/upgrades?project&dev&limit` (device token) |
+| `find_usages` | nothing: walks the folder for lines importing the package (`usages.go`) |
 
 - Stdout is the protocol. Anything for a person goes to stderr, or a client
   reads it as a broken message.
@@ -104,6 +106,9 @@ initialize, ping, tools/list and tools/call, and nothing else. Code in
 - `check_dependencies` reads the package.json of the folder the assistant
   started it in and sends only the four dependency blocks, never scripts or
   the package name.
+- `find_usages` reads source files only (js, ts, jsx, tsx, vue, svelte,
+  astro, up to 1 MB), skips `node_modules`, build output and hidden
+  folders, and never calls the server.
 - A package name must match npm's own rule before it goes in a URL path.
 - An API error comes back as a tool result with `isError`, carrying the
   server's message, so the assistant can tell the user instead of retrying.

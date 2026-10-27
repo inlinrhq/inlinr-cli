@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -72,7 +73,7 @@ func TestInitializeAndList(t *testing.T) {
 	for _, tool := range tools {
 		names = append(names, tool.(map[string]any)["name"].(string))
 	}
-	want := "time_summary,log_time,check_dependencies,package_releases,upgrade_notes"
+	want := "time_summary,log_time,check_dependencies,package_releases,upgrade_notes,my_upgrades,find_usages"
 	if strings.Join(names, ",") != want {
 		t.Errorf("tools = %v", names)
 	}
@@ -173,5 +174,79 @@ func TestUnknownArgumentsAreRefused(t *testing.T) {
 	res, _ := (&Tools{Backend: &fakeBackend{signedIn: true}}).Call(context.Background(), "time_summary", json.RawMessage(`{"periode":"7d"}`))
 	if !res.IsError {
 		t.Error("a misspelt argument should not be ignored")
+	}
+}
+
+func TestMyUpgradesPassesTheFilters(t *testing.T) {
+	b := &fakeBackend{signedIn: true, status: 200, reply: `{"upgrades":[]}`}
+	res, _ := (&Tools{Backend: b}).Call(context.Background(), "my_upgrades",
+		json.RawMessage(`{"project":"acme","include_dev":false,"limit":10}`))
+	if res.IsError {
+		t.Fatalf("got %+v", res)
+	}
+	c := b.calls[0]
+	if c.path != "/api/v1/me/upgrades" || c.query.Get("project") != "acme" || c.query.Get("dev") != "0" || c.query.Get("limit") != "10" {
+		t.Errorf("call = %+v", c)
+	}
+	none := &fakeBackend{}
+	res, _ = (&Tools{Backend: none}).Call(context.Background(), "my_upgrades", nil)
+	if !res.IsError || len(none.calls) != 0 {
+		t.Errorf("without a token: %+v", res)
+	}
+}
+
+func TestFindUsagesReadsOnlyThisCodebase(t *testing.T) {
+	dir := t.TempDir()
+	write := func(rel, content string) {
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("src/app.tsx", "import { useState } from \"react\";\nimport { createRoot } from 'react-dom/client';\nconst x = 'react';\n")
+	write("src/lazy.ts", "const jsx = await import(`react/jsx-runtime`);\nexport { forwardRef } from \"react\";\n")
+	write("src/multi.ts", "import {\n  a,\n} from \"react\";\n")
+	write("node_modules/react/index.js", "module.exports = require('react');\n")
+	write(".next/server.js", "require(\"react\")\n")
+	write("README.md", "import React from \"react\"\n")
+
+	b := &fakeBackend{}
+	res, _ := (&Tools{Backend: b, Dir: dir}).Call(context.Background(), "find_usages", json.RawMessage(`{"name":"react"}`))
+	if res.IsError {
+		t.Fatalf("got %+v", res)
+	}
+	var got struct {
+		Files       int            `json:"files"`
+		BySpecifier map[string]int `json:"by_specifier"`
+		Usages      []Usage        `json:"usages"`
+	}
+	if err := json.Unmarshal([]byte(res.Content[0].Text), &got); err != nil {
+		t.Fatal(err)
+	}
+	var lines []string
+	for _, u := range got.Usages {
+		lines = append(lines, u.File+":"+strconv.Itoa(u.Line))
+	}
+	want := "src/app.tsx:1,src/lazy.ts:1,src/lazy.ts:2,src/multi.ts:3"
+	if strings.Join(lines, ",") != want {
+		t.Errorf("usages = %v", lines)
+	}
+	if got.Files != 3 || got.BySpecifier["react/jsx-runtime"] != 1 || got.BySpecifier["react"] != 3 {
+		t.Errorf("got %+v", got)
+	}
+	if len(b.calls) != 0 {
+		t.Error("find_usages must not call the server")
+	}
+
+	res, _ = (&Tools{Backend: b, Dir: dir}).Call(context.Background(), "find_usages", json.RawMessage(`{"name":"react","max":1}`))
+	if !strings.Contains(res.Content[0].Text, `"truncated": true`) {
+		t.Errorf("max 1: %s", res.Content[0].Text)
+	}
+	res, _ = (&Tools{Backend: b, Dir: dir}).Call(context.Background(), "find_usages", json.RawMessage(`{"name":"../etc"}`))
+	if !res.IsError {
+		t.Error("a name that is not a package must be refused")
 	}
 }

@@ -173,8 +173,10 @@ or, in a client's JSON config:
 Tools: `time_summary` (time by project and language, AI time and cost),
 `log_time` (a manual entry), `check_dependencies` (the package.json in the
 folder the assistant runs in; only its four dependency blocks are sent),
-`package_releases` and `upgrade_notes`. The package tools work without
-signing in.
+`package_releases`, `upgrade_notes`, `my_upgrades` (your Upgrades list:
+what to upgrade first, from which version to which) and `find_usages` (the
+lines of this codebase that import a package, searched on your machine;
+nothing is sent). The package tools work without signing in.
 
 ## Build
 
