@@ -43,7 +43,7 @@ cmd/inlinr/              # subcommand entry points
   heartbeat.go           # the hot path — plugins call this 100× a day
   doctor.go              # config dump + server ping
   signout.go             # revoke this device's token
-  upgrade.go             # self-update from GitHub Releases (SHA256-verified)
+  upgrade.go             # self-update from GitHub Releases (signed SHA256SUMS)
   synccommits.go         # `inlinr sync-commits` — commits from any git host
   syncdeps.go            # `inlinr sync-deps` — manifests for dependency tracking
   mcp.go                 # `inlinr mcp` — MCP server over stdio
@@ -125,15 +125,21 @@ inlinr.com. Code in `internal/report/`.
 
 - `make build` → `bin/inlinr` (native).
 - `make build-all` → `dist/inlinr-{os}-{arch}` (5 binaries) + `SHA256SUMS.txt`.
-- Release: tag `vX.Y.Z`, GitHub Actions cross-compiles, publishes `SHA256SUMS.txt`, uploads.
-- **Nothing is code-signed.** This line used to claim macOS notarization and
+- Release: tag `vX.Y.Z`, GitHub Actions cross-compiles, publishes `SHA256SUMS.txt`
+  and `SHA256SUMS.txt.sig`, uploads. The signature is Ed25519 by the
+  `RELEASE_SIGNING_KEY` secret (private key in PEM; Thibault keeps the copy),
+  checked in the workflow against `internal/release/release-key.pub.pem`; with
+  no secret the release fails. `inlinr upgrade` and the VS Code extension refuse
+  a release whose list is unsigned or signed by another key. Rotating the key:
+  ship a CLI and an extension carrying the new public key first.
+- **No Authenticode / notarization.** This line used to claim macOS notarization and
   Windows code-signing; neither exists in `.github/workflows/release.yml`. The
   consequence is real and user-visible: Windows SmartScreen warns on the `.exe`,
   and some antivirus engines heuristically flag unsigned Go binaries. Fixing it
   needs a paid Authenticode certificate, not a workflow change — see the
   Downloads section of README.md.
-- The VS Code extension auto-downloads from GitHub Releases and verifies against
-  SHA256SUMS.txt. The Claude Code plugin does not use the binary.
+- The VS Code extension auto-downloads from GitHub Releases and verifies the
+  signature, then SHA256SUMS.txt. The Claude Code plugin does not use the binary.
 
 ## Who depends on this, and what to update
 

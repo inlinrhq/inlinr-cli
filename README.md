@@ -78,9 +78,20 @@ harmless: most people stop at that dialog, and they are right to.
 
 ### Verify what you downloaded
 
-Every release publishes `SHA256SUMS.txt`. Builds use `-trimpath`, so they are
-reproducible: anyone can rebuild the same tag from source and get the same
-hash. That is the integrity guarantee available today.
+Every release publishes `SHA256SUMS.txt` and `SHA256SUMS.txt.sig`, its
+Ed25519 signature by Inlinr's release key. `inlinr upgrade` and the VS Code
+extension install nothing whose list that key did not sign. Builds use
+`-trimpath`, so they are reproducible: anyone can rebuild the same tag from
+source and get the same hash. (This is not Authenticode code signing: Windows
+still warns, see below.)
+
+To check the signature yourself, with the public key from
+[internal/release/release-key.pub.pem](internal/release/release-key.pub.pem):
+
+```sh
+openssl pkeyutl -verify -rawin -pubin -inkey release-key.pub.pem \
+  -in SHA256SUMS.txt -sigfile SHA256SUMS.txt.sig
+```
 
 **PowerShell**
 
@@ -133,7 +144,7 @@ inlinr heartbeat \
   --plugin vscode-inlinr/0.1.0 \
   --write
 inlinr doctor                       # diagnose config + connectivity
-inlinr upgrade                      # update this binary (SHA256-verified)
+inlinr upgrade                      # update this binary (signature + SHA256 verified)
 inlinr signout                      # revoke this machine's token
 inlinr sync-commits                 # send local git line counts (opt-in)
 inlinr sync-deps                    # send npm manifests of a followed project
