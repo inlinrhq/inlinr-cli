@@ -130,7 +130,10 @@ inlinr.com. Code in `internal/report/`.
 
 - `make build` → `bin/inlinr` (native).
 - `make build-all` → `dist/inlinr-{os}-{arch}` (5 binaries) + `SHA256SUMS.txt`.
-- Release: tag `vX.Y.Z`, GitHub Actions cross-compiles, publishes `SHA256SUMS.txt`
+- Release: change `VERSION` (X.Y.Z) in a pull request; its merge to main
+  makes `release.yml` tag `vX.Y.Z` on the merged commit (a version already
+  tagged is skipped; a `v*` tag pushed by hand still works). GitHub Actions
+  cross-compiles, publishes `SHA256SUMS.txt`
   and `SHA256SUMS.txt.sig`, uploads. The signature is Ed25519 by the
   `RELEASE_SIGNING_KEY` secret (private key in PEM; Thibault keeps the copy),
   checked in the workflow against `internal/release/release-key.pub.pem`; with
