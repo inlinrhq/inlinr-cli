@@ -1,10 +1,10 @@
 # inlinr-cli
 
-> **Reprise de session** — lis d'abord `../PROGRESS.md` (racine du workspace) : il tient l'état
-> d'avancement du chantier en cours, la prochaine action, et couvre les 3 repos. Mets-le à jour
+> **Reprise de session** — sur le poste local, lis d'abord `../PROGRESS.md` (racine du
+> workspace, absent d'un clone seul) : il tient l'état du chantier en cours. Mets-le à jour
 > après chaque modification.
 
-Go daemon that editor plugins spawn to send heartbeats. Owns: auth token storage, offline SQLite queue, batch upload, HTTP retry. Plugins never touch the network directly.
+Go binary that the VS Code extension spawns to send heartbeats. Owns: auth token storage, offline SQLite queue, batch upload, HTTP retry. The extension never sends a beat itself (it only reports its own failures); the Claude Code plugin does not use this binary at all.
 
 AI assistant transcripts are **not** parsed here. The Claude Code plugin
 (`inlinrhq/inlinr-claude-code`, `src/transcript.ts` + `src/api.ts`) reads them
@@ -19,7 +19,8 @@ Sibling repos:
 - `inlinrhq/inlinr-web` — server (ingest + dashboard). Source of truth for the wire contract below.
 - `inlinrhq/inlinr-vscode` — VS Code plugin that spawns this binary.
 - `inlinrhq/inlinr-claude-code` — Claude Code plugin. Does **not** spawn this
-  binary; it shares only `~/.inlinr/config.toml` (the device token).
+  binary and keeps its own token in `~/.inlinr/claude-code.json`; from this
+  CLI's `config.toml` it reads only `error_reports` under `[behavior]`.
 - No JetBrains or Neovim plugin exists yet (both are "considering" on the roadmap).
 
 ---
@@ -133,6 +134,19 @@ inlinr.com. Code in `internal/report/`.
   Downloads section of README.md.
 - The VS Code extension auto-downloads from GitHub Releases and verifies against
   SHA256SUMS.txt. The Claude Code plugin does not use the binary.
+
+## Who depends on this, and what to update
+
+- **inlinr-vscode** spawns `inlinr heartbeat` with the flags in its CLAUDE.md
+  and downloads the binary from this repository's latest GitHub Release. A new
+  flag ships here first, in a release, before the extension uses it:
+  `heartbeat` exits 2 on an unknown flag.
+- **AI assistants** run `inlinr mcp`; its tools call inlinr-web's public and
+  `/api/v1/me/*` endpoints.
+- A release that changes behaviour: describe it in the GitHub Release notes
+  (there is no CHANGELOG.md here) and keep README.md's command list and
+  config keys true. A new user-facing command (as `mcp` was) also belongs on
+  inlinr.com: the server repository's `docs/public-pages.md` says where.
 
 ## Version injection
 
