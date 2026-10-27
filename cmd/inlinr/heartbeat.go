@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/inlinrhq/inlinr-cli/internal/api"
@@ -24,9 +25,8 @@ func runHeartbeat(args []string) error {
 	entity := fs.String("entity", "", "file path of the active document")
 	entityType := fs.String("type", "file", "entity type: file|app|domain")
 	timeFlag := fs.Float64("time", float64(time.Now().UnixMilli())/1000.0, "unix timestamp (seconds, fractional ok)")
-	projectRemote := fs.String("project-git-remote", "", "git remote URL of the project (required)")
-	project := fs.String("project", "", "explicit project name override (unused server-side; remote wins)")
-	_ = project // reserved for future use; server resolves from project-git-remote
+	projectRemote := fs.String("project-git-remote", "", "git remote URL of the project")
+	project := fs.String("project", "", "folder name, for a folder with no git remote (the remote wins when both are given)")
 	branch := fs.String("branch", "", "git branch name")
 	language := fs.String("language", "", "language identifier")
 	category := fs.String("category", "coding", "coding|debugging|building|code-reviewing|writing-tests")
@@ -62,8 +62,9 @@ func runHeartbeat(args []string) error {
 	}
 	defer closeLog()
 
-	if *projectRemote == "" {
-		return errors.New("--project-git-remote is required")
+	folder := projectName(*projectRemote, *project)
+	if *projectRemote == "" && folder == "" {
+		return errors.New("--project-git-remote or --project is required")
 	}
 	if *entity == "" {
 		return errors.New("--entity is required")
@@ -84,6 +85,7 @@ func runHeartbeat(args []string) error {
 		Type:               *entityType,
 		Time:               *timeFlag,
 		ProjectGitRemote:   *projectRemote,
+		Project:            folder,
 		Branch:             strPtr(*branch),
 		Language:           strPtr(*language),
 		Category:           strPtr(*category),
@@ -147,7 +149,9 @@ func runHeartbeat(args []string) error {
 
 	// After the beats are queued, before the network: the check only reads a
 	// small file, and spawning it here means a failed flush does not skip it.
-	maybeSyncDeps(cfg, *entity, *projectRemote)
+	if *projectRemote != "" {
+		maybeSyncDeps(cfg, *entity, *projectRemote)
+	}
 
 	return flush(ctx, q, cfg)
 }
@@ -245,4 +249,18 @@ func int64PtrOrNil(i int64) *int64 {
 		return nil
 	}
 	return &i
+}
+
+// projectName is the folder name sent for a folder with no git remote: its
+// last path segment only, so a path never carries the home folder. Empty
+// when there is a remote, which is the project.
+func projectName(remote, name string) string {
+	if remote != "" {
+		return ""
+	}
+	name = strings.TrimRight(strings.ReplaceAll(name, "\\", "/"), "/")
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	return strings.TrimSpace(name)
 }

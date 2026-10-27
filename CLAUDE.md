@@ -176,7 +176,8 @@ If you edit any of the sections below, update the matching sections in the serve
   "entity":              "src/routes/index.tsx",     // required — file path, URL, or app name
   "type":                "file",                     // optional, default "file"; also "app"|"domain"
   "time":                1734523920.123,             // required — unix seconds (fractional ms ok)
-  "project_git_remote":  "git@github.com:you/r.git", // required — server upserts Project by this
+  "project_git_remote":  "git@github.com:you/r.git", // required unless `project` — server upserts Project by this
+  "project":             "side-folder",              // a folder with no git remote: its name (last segment only)
   "branch":              "main",                     // optional
   "language":            "typescript",               // optional
   "category":            "coding",                   // optional; coding|debugging|building|code-reviewing|writing-tests

@@ -132,6 +132,8 @@ inlinr heartbeat \
   --editor vscode \
   --plugin vscode-inlinr/0.1.0 \
   --write
+# a folder with no git remote: --project <folder name> instead of
+# --project-git-remote (only the name leaves the machine, never the path)
 inlinr doctor                       # diagnose config + connectivity
 inlinr upgrade                      # update this binary (SHA256-verified)
 inlinr signout                      # revoke this machine's token
