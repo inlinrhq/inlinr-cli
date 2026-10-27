@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/inlinrhq/inlinr-cli/internal/release"
 )
 
 const (
@@ -22,8 +24,9 @@ const (
 )
 
 // runUpgrade checks the latest GitHub release, downloads the matching
-// binary + SHA256SUMS.txt, verifies the hash, and atomically replaces the
-// running binary (Windows-safe via rename-then-write).
+// binary, SHA256SUMS.txt and its signature, checks the signature against the
+// release key built into this binary, then the hash, and atomically replaces
+// the running binary (Windows-safe via rename-then-write).
 func runUpgrade(args []string) error {
 	fs := flag.NewFlagSet("upgrade", flag.ExitOnError)
 	check := fs.Bool("check", false, "print the latest version without installing")
@@ -68,6 +71,14 @@ func runUpgrade(args []string) error {
 	if err != nil {
 		return err
 	}
+	sigBytes, err := fetchBytes(ctx, shaURL+".sig")
+	if err != nil {
+		return fmt.Errorf("release %s is not signed, not installing it: %w", latest, err)
+	}
+	if err := release.VerifySums(shaBytes, sigBytes); err != nil {
+		return fmt.Errorf("release %s: %w", latest, err)
+	}
+	fmt.Println("signature verified")
 
 	expected := parseSHASum(string(shaBytes), binName)
 	if expected == "" {

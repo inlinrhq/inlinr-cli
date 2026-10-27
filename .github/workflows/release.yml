@@ -1,5 +1,6 @@
 # Cross-compile inlinr CLI for darwin/linux/windows × amd64/arm64 on every
-# `v*` tag, publish a GitHub Release with binaries + SHA256SUMS.txt.
+# `v*` tag, publish a GitHub Release with binaries + SHA256SUMS.txt and its
+# Ed25519 signature, SHA256SUMS.txt.sig.
 # The VS Code plugin fetches from this release's `latest` alias.
 
 name: release
@@ -30,9 +31,8 @@ jobs:
         run: |
           mkdir -p dist
           # -trimpath strips local filesystem paths from the binary. It makes
-          # the build reproducible — anyone can rebuild the same tag and get a
-          # matching SHA256 — which is the only integrity guarantee available
-          # while the binaries are unsigned.
+          # the build reproducible: anyone can rebuild the same tag and get a
+          # matching SHA256.
           LDFLAGS="-s -w -X main.Version=${VERSION}"
           BUILDFLAGS="-trimpath"
           PKG="./cmd/inlinr"
@@ -55,10 +55,32 @@ jobs:
           sha256sum inlinr-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      # `inlinr upgrade` and the VS Code extension install nothing whose list
+      # this key did not sign. The check against the public key the binaries
+      # carry stops a release signed with any other key.
+      - name: Sign SHA256SUMS.txt
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          if [ -z "$RELEASE_SIGNING_KEY" ]; then
+            echo "RELEASE_SIGNING_KEY is not set: refusing to publish an unsigned release" >&2
+            exit 1
+          fi
+          umask 077
+          key="$RUNNER_TEMP/release-key.pem"
+          printf '%s\n' "$RELEASE_SIGNING_KEY" > "$key"
+          openssl pkeyutl -sign -rawin -inkey "$key" \
+            -in dist/SHA256SUMS.txt -out dist/SHA256SUMS.txt.sig
+          rm -f "$key"
+          openssl pkeyutl -verify -rawin -pubin \
+            -inkey internal/release/release-key.pub.pem \
+            -in dist/SHA256SUMS.txt -sigfile dist/SHA256SUMS.txt.sig
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             dist/inlinr-*
             dist/SHA256SUMS.txt
+            dist/SHA256SUMS.txt.sig
           generate_release_notes: true
