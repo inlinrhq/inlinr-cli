@@ -153,25 +153,45 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// swapBinary replaces the running executable atomically. On Windows you can't
-// write to an open file, but you can rename it — so we rename the current
-// binary to ".old" and write the new bytes at the original path. The ".old"
-// file sticks around until the next upgrade (the running process can't remove
-// itself).
+// swapBinary replaces the running executable. The new bytes are written next
+// to it first, so the only gap is a rename: a plugin spawning `inlinr` while
+// an upgrade runs used to find no binary at all for as long as the write took,
+// and lost the beats it was flushing. On Windows a running .exe cannot be
+// replaced but can be renamed, so it moves to ".old" first; that file stays
+// until the next upgrade (the running process can't remove itself).
 func swapBinary(newBytes []byte) error {
 	current, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("locate current binary: %w", err)
 	}
-	old := current + ".old"
-	_ = os.Remove(old) // leftover from previous upgrade
-	if err := os.Rename(current, old); err != nil {
-		return fmt.Errorf("rename current: %w", err)
-	}
-	if err := os.WriteFile(current, newBytes, 0o755); err != nil {
-		// restore from .old on failure so the user isn't left without a binary
-		_ = os.Rename(old, current)
+	return replaceFile(current, newBytes, runtime.GOOS == "windows")
+}
+
+func replaceFile(current string, newBytes []byte, renameAway bool) error {
+	next := current + ".new"
+	if err := os.WriteFile(next, newBytes, 0o755); err != nil {
+		_ = os.Remove(next)
 		return fmt.Errorf("write new binary: %w", err)
+	}
+	if renameAway {
+		old := current + ".old"
+		_ = os.Remove(old) // leftover from previous upgrade
+		if err := os.Rename(current, old); err != nil {
+			_ = os.Remove(next)
+			return fmt.Errorf("rename current: %w", err)
+		}
+		if err := os.Rename(next, current); err != nil {
+			// Put the old one back so the user isn't left without a binary.
+			_ = os.Rename(old, current)
+			_ = os.Remove(next)
+			return fmt.Errorf("move new binary: %w", err)
+		}
+		return nil
+	}
+	// Elsewhere a rename over the running file is atomic.
+	if err := os.Rename(next, current); err != nil {
+		_ = os.Remove(next)
+		return fmt.Errorf("move new binary: %w", err)
 	}
 	return nil
 }
