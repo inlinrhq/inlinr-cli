@@ -1,16 +1,24 @@
-# Cross-compile inlinr CLI for darwin/linux/windows × amd64/arm64 on every
-# `v*` tag, publish a GitHub Release with binaries + SHA256SUMS.txt and its
-# Ed25519 signature, SHA256SUMS.txt.sig.
+# Cross-compile inlinr CLI for darwin/linux/windows × amd64/arm64, publish a
+# GitHub Release with binaries + SHA256SUMS.txt and its Ed25519 signature,
+# SHA256SUMS.txt.sig.
 # The VS Code plugin fetches from this release's `latest` alias.
+#
+# Runs when a merge to main changes VERSION to a version with no tag yet: the
+# release creates the `v<VERSION>` tag itself. A `v*` tag pushed by hand still
+# publishes too.
 
 name: release
 
 on:
   push:
+    branches: [main]
+    paths: [VERSION]
     tags: ["v*"]
 
 permissions:
   contents: write
+
+concurrency: release
 
 # Actions pinned to a commit: this job can write releases, and every
 # installed binary updates itself from them. A moved tag cannot change it.
@@ -21,13 +29,35 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      # The tag pushed, or VERSION on main. A version already tagged was
+      # released before: the rest is skipped.
+      - name: Version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v$(tr -d '[:space:]' < VERSION)"
+            if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "VERSION must hold X.Y.Z, got ${tag#v}" >&2
+              exit 1
+            fi
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+              echo "$tag is already released"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - if: steps.version.outputs.skip != 'true'
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: "1.25"
 
       - name: Cross-compile
+        if: steps.version.outputs.skip != 'true'
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.tag }}
         run: |
           mkdir -p dist
           # -trimpath strips local filesystem paths from the binary. It makes
@@ -59,6 +89,7 @@ jobs:
       # this key did not sign. The check against the public key the binaries
       # carry stops a release signed with any other key.
       - name: Sign SHA256SUMS.txt
+        if: steps.version.outputs.skip != 'true'
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
@@ -76,9 +107,13 @@ jobs:
             -inkey internal/release/release-key.pub.pem \
             -in dist/SHA256SUMS.txt -sigfile dist/SHA256SUMS.txt.sig
 
+      # On main, this creates the tag on the merged commit.
       - name: Upload to GitHub Release
+        if: steps.version.outputs.skip != 'true'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             dist/inlinr-*
             dist/SHA256SUMS.txt
