@@ -21,7 +21,7 @@ import (
 const retryAfter = time.Hour
 
 // runSyncDeps sends a repository's npm manifests when its owner follows its
-// dependencies on Inlinr. The heartbeat path spawns it, detached, at most
+// dependencies on inlinr. The heartbeat path spawns it, detached, at most
 // once a day per repository; it can also be run by hand.
 //
 // Only the default branch is read: a feature branch's package.json is a
@@ -61,7 +61,7 @@ func runSyncDeps(args []string) error {
 		remote = git.Remote
 	}
 	if remote == "" {
-		say("no git remote, so no Inlinr project to send to")
+		say("no git remote, so no inlinr project to send to")
 		return nil
 	}
 
@@ -126,7 +126,7 @@ func runSyncDeps(args []string) error {
 	}
 	if !status.Wanted {
 		_ = deps.Defer(home, remote, now.Add(next))
-		say("dependency tracking is off for this project on Inlinr, nothing sent")
+		say("dependency tracking is off for this project on inlinr, nothing sent")
 		return nil
 	}
 	if err := client.SendManifests(ctx, upload); err != nil {

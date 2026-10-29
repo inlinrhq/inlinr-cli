@@ -1,4 +1,4 @@
-// Package api wraps the Inlinr HTTP ingest endpoint.
+// Package api wraps the inlinr HTTP ingest endpoint.
 package api
 
 import (

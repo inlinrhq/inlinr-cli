@@ -1,13 +1,13 @@
-// Command inlinr is the Inlinr tracking daemon: it accepts heartbeats from
+// Command inlinr is the inlinr tracking daemon: it accepts heartbeats from
 // editor plugins, buffers them in an on-disk SQLite queue, and uploads batches
-// to the Inlinr ingest endpoint.
+// to the inlinr ingest endpoint.
 //
 // Subcommands:
 //
 //	inlinr activate            run the Device flow and write a token to config
 //	inlinr heartbeat [flags]   enqueue a heartbeat (optionally flush) from a plugin
 //	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
-//	inlinr sync-deps [flags]   send npm manifests of a project followed on Inlinr
+//	inlinr sync-deps [flags]   send npm manifests of a project followed on inlinr
 //	inlinr mcp                 serve the Model Context Protocol to an AI assistant
 //	inlinr doctor              print config + ping server
 //	inlinr --version
@@ -60,7 +60,7 @@ func main() {
 		// never calls this binary. The command stays as a no-op because early
 		// plugin releases ran it from a Stop hook, and a hook that exits
 		// non-zero interrupts the user's turn. It must keep exiting 0.
-		fmt.Fprintln(os.Stderr, "inlinr: sync-ai is retired; update the Inlinr plugin for Claude Code, which tracks AI sessions itself")
+		fmt.Fprintln(os.Stderr, "inlinr: sync-ai is retired; update the inlinr plugin for Claude Code, which tracks AI sessions itself")
 	case "mcp":
 		if err := runMCP(os.Args[2:]); err != nil {
 			fail(err)
@@ -98,7 +98,7 @@ Usage:
   inlinr sync-deps [flags]        Send npm manifests, if the project's dependencies are followed.
                                   Counts only — no messages, no file paths.
                                   Run it yourself; nothing calls it for you.
-  inlinr mcp                      Serve Inlinr's tools to an AI assistant over stdio (MCP).
+  inlinr mcp                      Serve inlinr's tools to an AI assistant over stdio (MCP).
   inlinr signout                  Revoke this device token (server + local).
   inlinr upgrade                  Download and install the latest release.
   inlinr doctor                   Print config and check server connectivity.

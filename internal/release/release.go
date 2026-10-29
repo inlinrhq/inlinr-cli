@@ -1,5 +1,5 @@
 // Package release checks that a release's SHA256SUMS.txt was signed with
-// Inlinr's release key before anything in it is trusted.
+// inlinr's release key before anything in it is trusted.
 //
 // SHA256SUMS.txt alone only proves a binary matches a list published next
 // to it: whoever can change one can change the other. The list is signed in

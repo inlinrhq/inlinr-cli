@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Backend is the Inlinr API as the tools see it. HTTPBackend is the real one;
+// Backend is the inlinr API as the tools see it. HTTPBackend is the real one;
 // tests pass a fake.
 type Backend interface {
 	// Do sends a request to an /api/v1 path and returns the status and body.
@@ -142,7 +142,7 @@ var defs = []toolDef{
 		Tool: Tool{
 			Name:  "log_time",
 			Title: "Log a manual entry",
-			Description: "Records time spent outside the editor (a meeting, a call, a review) as a manual entry in Inlinr. " +
+			Description: "Records time spent outside the editor (a meeting, a call, a review) as a manual entry in inlinr. " +
 				"Ask the user before logging time they did not mention.",
 			InputSchema: obj(map[string]any{
 				"minutes": map[string]any{"type": "integer", "minimum": 1, "maximum": 1440, "description": "How long, in minutes."},
@@ -211,7 +211,7 @@ var defs = []toolDef{
 		Tool: Tool{
 			Name:  "my_upgrades",
 			Title: "What to upgrade",
-			Description: "The user's Upgrades list from Inlinr, for the projects whose dependencies they follow: security fixes first, then deprecated packages, " +
+			Description: "The user's Upgrades list from inlinr, for the projects whose dependencies they follow: security fixes first, then deprecated packages, " +
 				"majors and the rest, each with the version to go from and to, the projects that declare it and the page that says what changes. " +
 				"Use it for \"what should I upgrade\"; then upgrade_notes for one package, and find_usages to see where the code uses it.",
 			InputSchema: obj(map[string]any{
@@ -266,14 +266,14 @@ func failure(format string, a ...any) Result {
 	return Result{Content: []Content{{Type: "text", Text: fmt.Sprintf(format, a...)}}, IsError: true}
 }
 
-const signInFirst = "This machine is not signed in to Inlinr. Run `inlinr activate` in a terminal, then try again."
+const signInFirst = "This machine is not signed in to inlinr. Run `inlinr activate` in a terminal, then try again."
 
 // answer turns an API reply into a tool result: the JSON itself when it
 // worked, the server's message when it did not.
 func (t *Tools) answer(ctx context.Context, method, path string, query url.Values, body any) Result {
 	status, out, err := t.Backend.Do(ctx, method, path, query, body)
 	if err != nil {
-		return failure("Could not reach Inlinr: %v", err)
+		return failure("Could not reach inlinr: %v", err)
 	}
 	if status >= 200 && status < 300 {
 		var v any
@@ -290,13 +290,13 @@ func (t *Tools) answer(ctx context.Context, method, path string, query url.Value
 	_ = json.Unmarshal(out, &e)
 	switch {
 	case status == http.StatusUnauthorized:
-		return failure("Inlinr refused this machine's token. Run `inlinr activate` again.")
+		return failure("inlinr refused this machine's token. Run `inlinr activate` again.")
 	case e.Message != "":
 		return failure("%s (%s)", e.Message, e.Error)
 	case e.Error != "":
-		return failure("Inlinr answered %d: %s", status, e.Error)
+		return failure("inlinr answered %d: %s", status, e.Error)
 	default:
-		return failure("Inlinr answered %d.", status)
+		return failure("inlinr answered %d.", status)
 	}
 }
 
