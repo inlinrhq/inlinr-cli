@@ -199,7 +199,7 @@ If you edit any of the sections below, update the matching sections in the serve
   "lineno":              42,                         // optional
   "cursorpos":           1023,                       // optional
   "lines":               180,                        // optional — total lines in file
-  "ai_tool":             "copilot",                  // optional — copilot|cursor|claude-code|codeium|windsurf|aider
+  "ai_tool":             "copilot",                  // optional — see "AI tool enum" below
   "ai_line_changes":     12,                         // optional — net delta (legacy)
   "human_line_changes":  3,                          // optional — net delta (legacy)
   "lines_added":         14,                         // optional — 0 is meaningful; absent = not counted
@@ -261,7 +261,12 @@ Retry semantics:
 
 ### AI tool enum (on the wire)
 
-`copilot` · `cursor` · `claude-code` · `codeium` · `windsurf` · `aider`. Anything else is rejected by server validation.
+`copilot` · `cursor` · `claude-code` · `codeium` · `windsurf` · `aider` ·
+`codex` · `gemini-cli` · `opencode`. Anything else is rejected by server
+validation (the server's list is `src/lib/ai/tools.ts` in inlinr-web).
+`heartbeat.AITools` holds the same list and drops an unknown value before
+sending. The VS Code extension only ever sends the first six; `codex` and
+`gemini-cli` come from the Claude Code plugin, which posts its own beats.
 
 ---
 

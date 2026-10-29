@@ -25,7 +25,7 @@ type Heartbeat struct {
 	// Which assistant produced this edit, if any. Set only when there is
 	// evidence of a generated edit — never merely because the tool is
 	// installed. See inlinr-vscode/src/edit-attribution.ts.
-	AITool *string `json:"ai_tool,omitempty"` // copilot|cursor|claude-code|codeium|windsurf|aider
+	AITool *string `json:"ai_tool,omitempty"` // one of AITools
 
 	// Lines touched in this beat's window, split by who wrote them. Zero is a
 	// meaningful value ("nothing changed"), which is why these are pointers:
@@ -64,7 +64,10 @@ type Heartbeat struct {
 
 // AITools is the ai_tool enum the server accepts. Anything else makes the
 // server reject the beat, and with it the time it carries.
-var AITools = []string{"copilot", "cursor", "claude-code", "codeium", "windsurf", "aider"}
+var AITools = []string{
+	"copilot", "cursor", "claude-code", "codeium", "windsurf", "aider",
+	"codex", "gemini-cli", "opencode",
+}
 
 // DropUnknownAITool clears AITool when it is not in AITools and returns the
 // value it removed ("" when it kept it). The beat is still worth sending:

@@ -34,7 +34,7 @@ func runHeartbeat(args []string) error {
 	lineno := fs.Int("lineno", -1, "current line number (1-based)")
 	cursorpos := fs.Int("cursorpos", -1, "current cursor character offset")
 	lines := fs.Int("lines-in-file", -1, "total line count in the file")
-	aiTool := fs.String("ai-tool", "", "copilot|cursor|claude-code|codeium|windsurf|aider")
+	aiTool := fs.String("ai-tool", "", "copilot|cursor|claude-code|codeium|windsurf|aider|codex|gemini-cli|opencode")
 	aiChanges := fs.Int("ai-line-changes", -1, "net lines changed by AI in the current window")
 	humanChanges := fs.Int("human-line-changes", -1, "net lines changed by human in the current window")
 	linesAdded := fs.Int("lines-added", -1, "lines added in the current window (any author)")

@@ -12,6 +12,7 @@ func TestDropUnknownAITool(t *testing.T) {
 		{nil, "", false},
 		{tool("claude-code"), "", true},
 		{tool("aider"), "", true},
+		{tool("gemini-cli"), "", true},
 		{tool("claude_code"), "claude_code", false},
 		{tool("chatgpt"), "chatgpt", false},
 	}
