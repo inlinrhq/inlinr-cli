@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://inlinr.com/brand/inlinr-logo-on-dark.svg">
+  <img alt="Inlinr" src="https://inlinr.com/brand/inlinr-logo-on-light.svg" height="36">
+</picture>
+
 # inlinr-cli
 
 Time tracking daemon for [Inlinr](https://inlinr.com). Accepts heartbeats from
