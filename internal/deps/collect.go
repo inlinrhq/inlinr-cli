@@ -1,9 +1,9 @@
-// Package deps reads a working copy's npm manifests for Inlinr's dependency
+// Package deps reads a working copy's npm manifests for inlinr's dependency
 // tracking, and the versions its lockfile installed.
 //
 // The server reads public GitHub repositories itself. Everything else, a
 // private repository or one hosted anywhere but GitHub, can only be read
-// here, from files already on the machine: Inlinr never asks GitHub for the
+// here, from files already on the machine: inlinr never asks GitHub for the
 // `repo` scope. What leaves the machine is the dependency fields of each
 // package.json, the pnpm workspace file when there is one, and one version
 // per direct dependency. Not the source, not the file tree, not the

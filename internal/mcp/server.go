@@ -1,6 +1,6 @@
 // Package mcp is the Model Context Protocol server behind `inlinr mcp`: an
 // AI assistant (Claude Code, Cursor, Claude Desktop…) starts it over stdio
-// and asks Inlinr about the user's time and dependencies through it.
+// and asks inlinr about the user's time and dependencies through it.
 //
 // The protocol is JSON-RPC 2.0, one message per line on stdin and stdout.
 // Only what a tools-only server needs is implemented: initialize, ping,
@@ -149,5 +149,5 @@ func (s *Server) send(r response) {
 	_ = s.out.Encode(r)
 }
 
-const instructions = `Inlinr tracks the user's coding time, the time and cost of their AI assistants, and the npm dependencies of the projects they follow.
+const instructions = `inlinr tracks the user's coding time, the time and cost of their AI assistants, and the npm dependencies of the projects they follow.
 Use time_summary for "how long did I spend on X" and for AI cost, log_time to record a meeting or call, check_dependencies to see what in a package.json is behind, deprecated or affected by an advisory, and package_releases / upgrade_notes before an upgrade.`

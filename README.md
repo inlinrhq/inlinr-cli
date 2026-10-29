@@ -1,13 +1,13 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://inlinr.com/brand/inlinr-logo-on-dark.svg">
-  <img alt="Inlinr" src="https://inlinr.com/brand/inlinr-logo-on-light.svg" height="36">
+  <img alt="inlinr" src="https://inlinr.com/brand/inlinr-logo-on-light.svg" height="36">
 </picture>
 
 # inlinr-cli
 
-Time tracking daemon for [Inlinr](https://inlinr.com). Accepts heartbeats from
+Time tracking daemon for [inlinr](https://inlinr.com). Accepts heartbeats from
 editor plugins (VS Code, JetBrains, Neovim, …), buffers them in an on-disk
-SQLite queue, and uploads batches to the Inlinr ingest endpoint.
+SQLite queue, and uploads batches to the inlinr ingest endpoint.
 
 Plugins call this binary as a subprocess — they don't talk to the API directly.
 
@@ -25,7 +25,7 @@ irm https://inlinr.com/install.ps1 | iex
 
 Both verify the published SHA-256 before installing and refuse to continue on a
 mismatch, and both put the binary somewhere already on your `PATH` — the
-Windows one adds `%LOCALAPPDATA%\Inlinr\bin` and sets it for the current
+Windows one adds `%LOCALAPPDATA%\inlinr\bin` and sets it for the current
 session too, so `inlinr activate` works immediately rather than after a restart
 nobody expects.
 
@@ -84,7 +84,7 @@ harmless: most people stop at that dialog, and they are right to.
 ### Verify what you downloaded
 
 Every release publishes `SHA256SUMS.txt` and `SHA256SUMS.txt.sig`, its
-Ed25519 signature by Inlinr's release key. `inlinr upgrade` and the VS Code
+Ed25519 signature by inlinr's release key. `inlinr upgrade` and the VS Code
 extension install nothing whose list that key did not sign. Builds use
 `-trimpath`, so they are reproducible: anyone can rebuild the same tag from
 source and get the same hash. (This is not Authenticode code signing: Windows
@@ -155,14 +155,14 @@ inlinr upgrade                      # update this binary (signature + SHA256 ver
 inlinr signout                      # revoke this machine's token
 inlinr sync-commits                 # send local git line counts (opt-in)
 inlinr sync-deps                    # send npm manifests of a followed project
-inlinr mcp                          # serve Inlinr's tools to an AI assistant (MCP)
+inlinr mcp                          # serve inlinr's tools to an AI assistant (MCP)
 inlinr --version
 ```
 
 ### In an AI assistant (MCP)
 
 `inlinr mcp` lets Claude Code, Cursor, Claude Desktop or any MCP client ask
-Inlinr about your time and your dependencies. Sign in once with
+inlinr about your time and your dependencies. Sign in once with
 `inlinr activate`, then add it to the assistant:
 
 ```sh
@@ -202,13 +202,13 @@ device_token = "in_d_..."
 [behavior]
 heartbeat_rate_limit_seconds = 120
 offline_queue_max = 10000
-error_reports = true   # false: never send the CLI's own errors to Inlinr
+error_reports = true   # false: never send the CLI's own errors to inlinr
 ```
 
 Queue at `~/.inlinr/queue.db`.
 
 When a command a plugin started fails on its own (a queue it cannot open, an
-upgrade whose checksum does not match, a crash), the CLI tells Inlinr, at most
+upgrade whose checksum does not match, a crash), the CLI tells inlinr, at most
 once a day for the same error: the command, the message with your home folder
 replaced by `~`, the CLI version, operating system and editor. No token, no
 file content. Network failures and server errors are never sent.

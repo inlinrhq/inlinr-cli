@@ -1,5 +1,5 @@
 // Package device implements the OAuth 2.0 Device Authorization Grant against
-// the Inlinr server (same flow as GitHub's CLI login).
+// the inlinr server (same flow as GitHub's CLI login).
 package device
 
 import (

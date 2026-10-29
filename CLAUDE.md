@@ -61,7 +61,7 @@ internal/
 
 ### `inlinr sync-deps`
 
-Sends a repository's npm manifests to Inlinr's dependency tracking, for
+Sends a repository's npm manifests to inlinr's dependency tracking, for
 projects whose owner turned it on in the dashboard. It is the only way a
 private repository, or one not on GitHub, is read: the server never asks
 GitHub for the `repo` scope. Code in `internal/deps/`.

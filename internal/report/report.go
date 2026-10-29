@@ -1,4 +1,4 @@
-// Package report sends the CLI's own failures to Inlinr, where they show in
+// Package report sends the CLI's own failures to inlinr, where they show in
 // Admin → Errors (POST /api/v1/plugin-errors). Before this, a CLI that could
 // not open its queue or replace itself wrote a line to stderr, the editor
 // plugin logged it to an output channel, and nobody ever read it.
