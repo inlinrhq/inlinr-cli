@@ -2,11 +2,14 @@
 package config
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -36,6 +39,11 @@ type Config struct {
 		Level string `toml:"level"`
 		File  string `toml:"file"`
 	} `toml:"logging"`
+
+	// TokenFrom names where Auth.DeviceToken came from when config.toml had
+	// none: "claude-code" for the Claude Code plugin's file. Empty when the
+	// token is this file's own. Never written back (see Save).
+	TokenFrom string `toml:"-"`
 }
 
 // Defaults returns a Config with sane defaults applied (no token yet).
@@ -96,15 +104,91 @@ func Load(override string) (Config, error) {
 		if override != "" {
 			return c, fmt.Errorf("config file not found: %s", override)
 		}
+		borrowPluginToken(&c)
 		return c, nil
 	}
-	if _, err := toml.DecodeFile(p, &c); err != nil {
+	raw, err := readRetry(p)
+	if err != nil {
+		return c, fmt.Errorf("read config %s: %w", p, err)
+	}
+	if _, err := toml.Decode(string(raw), &c); err != nil {
 		return c, fmt.Errorf("parse config %s: %w", p, err)
+	}
+	if c.Auth.DeviceToken == "" && override == "" {
+		borrowPluginToken(&c)
 	}
 	return c, nil
 }
 
-// Save writes the config to disk with mode 0600.
+// One connection per machine: every inlinr plugin on it sends with the same
+// device token. config.toml holds it; the Claude Code plugin reads it there
+// too. A machine connected by an older plugin release has its token only in
+// ~/.inlinr/claude-code.json, so it is read from there when this file has
+// none, rather than asking the person to sign in a second time.
+
+// PluginPath is the Claude Code plugin's state file, next to config.toml.
+func PluginPath() (string, error) {
+	h, err := Home()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(h, "claude-code.json"), nil
+}
+
+func borrowPluginToken(c *Config) {
+	p, err := PluginPath()
+	if err != nil {
+		return
+	}
+	raw, err := readRetry(p)
+	if err != nil {
+		return
+	}
+	var plugin struct {
+		DeviceToken string `json:"deviceToken"`
+	}
+	if json.Unmarshal(raw, &plugin) != nil || plugin.DeviceToken == "" {
+		return
+	}
+	c.Auth.DeviceToken = plugin.DeviceToken
+	c.TokenFrom = "claude-code"
+}
+
+// ClearPluginToken removes token from the Claude Code plugin's file, when
+// that file holds this very token. Signing out revokes the token on the
+// server; leaving it there would have the plugin send with a dead token.
+// Everything else in the file (read positions) is kept as it is: the plugin
+// starts over by itself when it next sees another token.
+func ClearPluginToken(token string) (bool, error) {
+	p, err := PluginPath()
+	if err != nil {
+		return false, err
+	}
+	raw, err := readRetry(p)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	var state map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &state); err != nil {
+		return false, fmt.Errorf("parse %s: %w", p, err)
+	}
+	var current string
+	if json.Unmarshal(state["deviceToken"], &current) != nil || current != token {
+		return false, nil
+	}
+	state["deviceToken"] = json.RawMessage(`""`)
+	out, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	return true, writeAtomic(p, append(out, '\n'))
+}
+
+// Save writes the config to disk with mode 0600. A token borrowed from the
+// Claude Code plugin's file stays there: Save writes only this file's own.
 func Save(c Config) error {
 	h, err := Home()
 	if err != nil {
@@ -113,13 +197,60 @@ func Save(c Config) error {
 	if err := os.MkdirAll(h, 0o700); err != nil {
 		return err
 	}
-	p := filepath.Join(h, "config.toml")
-	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
+	if c.TokenFrom != "" {
+		c.Auth.DeviceToken = ""
+	}
+	var buf bytes.Buffer
+	if err := toml.NewEncoder(&buf).Encode(c); err != nil {
 		return err
 	}
-	defer f.Close()
-	return toml.NewEncoder(f).Encode(c)
+	return writeAtomic(filepath.Join(h, "config.toml"), buf.Bytes())
+}
+
+// writeAtomic replaces path in one step: the Claude Code plugin reads the
+// token from config.toml on every hook, and a file caught half written would
+// read as "not connected".
+//
+// On Windows a rename onto a file another process has open fails ("Access is
+// denied"): measured on Windows 11 with a reader in a loop, more than half of
+// 2000 renames failed. The reader holds it for a moment, so the rename is
+// tried again for up to about half a second.
+func writeAtomic(path string, data []byte) error {
+	tmp := fmt.Sprintf("%s.%d.tmp", path, os.Getpid())
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		return err
+	}
+	var err error
+	for attempt := 0; attempt < retries; attempt++ {
+		if err = os.Rename(tmp, path); err == nil {
+			return nil
+		}
+		time.Sleep(retryDelay(attempt))
+	}
+	_ = os.Remove(tmp)
+	return err
+}
+
+// readRetry reads a file another process may be replacing: on Windows a read
+// that meets the rename gets a sharing violation, not the file, and a token
+// read as missing would say "not connected". A missing file is not retried.
+func readRetry(path string) ([]byte, error) {
+	var err error
+	for attempt := 0; attempt < retries; attempt++ {
+		var raw []byte
+		if raw, err = os.ReadFile(path); err == nil || errors.Is(err, os.ErrNotExist) {
+			return raw, err
+		}
+		time.Sleep(retryDelay(attempt))
+	}
+	return nil, err
+}
+
+const retries = 8
+
+// 10, 20, 40, 80, 80… ms: about half a second in all.
+func retryDelay(attempt int) time.Duration {
+	return time.Duration(10<<min(attempt, 3)) * time.Millisecond
 }
 
 // Platform returns a short platform string for device activation metadata.
