@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -106,7 +107,11 @@ func Load(override string) (Config, error) {
 		borrowPluginToken(&c)
 		return c, nil
 	}
-	if _, err := toml.DecodeFile(p, &c); err != nil {
+	raw, err := readRetry(p)
+	if err != nil {
+		return c, fmt.Errorf("read config %s: %w", p, err)
+	}
+	if _, err := toml.Decode(string(raw), &c); err != nil {
 		return c, fmt.Errorf("parse config %s: %w", p, err)
 	}
 	if c.Auth.DeviceToken == "" && override == "" {
@@ -135,7 +140,7 @@ func borrowPluginToken(c *Config) {
 	if err != nil {
 		return
 	}
-	raw, err := os.ReadFile(p)
+	raw, err := readRetry(p)
 	if err != nil {
 		return
 	}
@@ -159,7 +164,7 @@ func ClearPluginToken(token string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	raw, err := os.ReadFile(p)
+	raw, err := readRetry(p)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
@@ -205,16 +210,47 @@ func Save(c Config) error {
 // writeAtomic replaces path in one step: the Claude Code plugin reads the
 // token from config.toml on every hook, and a file caught half written would
 // read as "not connected".
+//
+// On Windows a rename onto a file another process has open fails ("Access is
+// denied"): measured on Windows 11 with a reader in a loop, more than half of
+// 2000 renames failed. The reader holds it for a moment, so the rename is
+// tried again for up to about half a second.
 func writeAtomic(path string, data []byte) error {
 	tmp := fmt.Sprintf("%s.%d.tmp", path, os.Getpid())
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
+	var err error
+	for attempt := 0; attempt < retries; attempt++ {
+		if err = os.Rename(tmp, path); err == nil {
+			return nil
+		}
+		time.Sleep(retryDelay(attempt))
 	}
-	return nil
+	_ = os.Remove(tmp)
+	return err
+}
+
+// readRetry reads a file another process may be replacing: on Windows a read
+// that meets the rename gets a sharing violation, not the file, and a token
+// read as missing would say "not connected". A missing file is not retried.
+func readRetry(path string) ([]byte, error) {
+	var err error
+	for attempt := 0; attempt < retries; attempt++ {
+		var raw []byte
+		if raw, err = os.ReadFile(path); err == nil || errors.Is(err, os.ErrNotExist) {
+			return raw, err
+		}
+		time.Sleep(retryDelay(attempt))
+	}
+	return nil, err
+}
+
+const retries = 8
+
+// 10, 20, 40, 80, 80… ms: about half a second in all.
+func retryDelay(attempt int) time.Duration {
+	return time.Duration(10<<min(attempt, 3)) * time.Millisecond
 }
 
 // Platform returns a short platform string for device activation metadata.
