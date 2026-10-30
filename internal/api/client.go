@@ -73,6 +73,32 @@ func (c *Client) RevokeDevice(ctx context.Context) error {
 	}
 }
 
+// CheckToken asks GET /api/v1/me/today, the smallest call a device token
+// can make, and reads nothing from it: nil when the token works, ErrAuth when
+// inlinr.com refuses it (the device was revoked), ErrTransient otherwise.
+func (c *Client) CheckToken(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/api/v1/me/today", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.DeviceToken)
+	req.Header.Set("User-Agent", c.UserAgent)
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrTransient, err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		return nil
+	case resp.StatusCode == http.StatusUnauthorized:
+		return ErrAuth
+	default:
+		return fmt.Errorf("%w: HTTP %d", ErrTransient, resp.StatusCode)
+	}
+}
+
 // SendHeartbeats POSTs a batch to /api/v1/heartbeats. Returns the parsed
 // response on success, or one of the sentinel errors above.
 func (c *Client) SendHeartbeats(ctx context.Context, beats []heartbeat.Heartbeat) (*BulkResponse, error) {
