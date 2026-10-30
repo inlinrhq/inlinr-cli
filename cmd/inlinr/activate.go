@@ -58,13 +58,17 @@ func runActivate(args []string) error {
 		return fmt.Errorf("poll for token: %w", err)
 	}
 
+	// Saved in config.toml, where every inlinr plugin on this machine reads
+	// it: the Claude Code plugin is connected by this too.
 	cfg.Auth.DeviceToken = tr.AccessToken
+	cfg.TokenFrom = ""
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}
 
 	fmt.Printf("\n  signed in as %s (%s), plan %s\n", tr.User.Name, tr.User.Email, tr.User.Plan)
 	fmt.Printf("  device id: %s\n", tr.Device.ID)
+	fmt.Println("  every inlinr plugin on this machine now uses this connection")
 	return nil
 }
 

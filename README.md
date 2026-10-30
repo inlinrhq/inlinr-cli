@@ -152,7 +152,7 @@ inlinr heartbeat \
 # --project-git-remote (only the name leaves the machine, never the path)
 inlinr doctor                       # diagnose config + connectivity
 inlinr upgrade                      # update this binary (signature + SHA256 verified)
-inlinr signout                      # revoke this machine's token
+inlinr signout                      # revoke this machine's token (every plugin on it)
 inlinr sync-commits                 # send local git line counts (opt-in)
 inlinr sync-deps                    # send npm manifests of a followed project
 inlinr mcp                          # serve inlinr's tools to an AI assistant (MCP)
@@ -206,6 +206,16 @@ error_reports = true   # false: never send the CLI's own errors to inlinr
 ```
 
 Queue at `~/.inlinr/queue.db`.
+
+### One connection per machine
+
+`device_token` is the machine's connection, shared by every inlinr plugin on
+it: the VS Code extension (through this binary), the MCP server and the Claude
+Code plugin all send with it. Connect one and the others are connected;
+`inlinr signout` signs them all out. A machine first connected by the Claude
+Code plugin before version 0.7.0 keeps its token in `~/.inlinr/claude-code.json`;
+the CLI uses it from there while `config.toml` has none (`inlinr doctor` says
+so).
 
 When a command a plugin started fails on its own (a queue it cannot open, an
 upgrade whose checksum does not match, a crash), the CLI tells inlinr, at most

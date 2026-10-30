@@ -19,8 +19,9 @@ Sibling repos:
 - `inlinrhq/inlinr-web` — server (ingest + dashboard). Source of truth for the wire contract below.
 - `inlinrhq/inlinr-vscode` — VS Code plugin that spawns this binary.
 - `inlinrhq/inlinr-claude-code` — Claude Code plugin. Does **not** spawn this
-  binary and keeps its own token in `~/.inlinr/claude-code.json`; from this
-  CLI's `config.toml` it reads only `error_reports` under `[behavior]`.
+  binary, but shares its connection: it reads and writes `[auth]
+  device_token` in `config.toml`, and `error_reports` under `[behavior]`.
+  Its read positions stay in `~/.inlinr/claude-code.json`.
 - No JetBrains or Neovim plugin exists yet (both are "considering" on the roadmap).
 
 ---
@@ -180,6 +181,11 @@ If you edit any of the sections below, update the matching sections in the serve
    - While pending: `{ "error": "authorization_pending" }` (HTTP 400).
    - On approval: `{ access_token: "in_d_...", device: {...}, user: {...} }` (HTTP 200).
 4. CLI stores `access_token` in `~/.inlinr/config.toml` as `auth.device_token`.
+   That token is the machine's, shared by every inlinr plugin on it: the
+   Claude Code plugin reads and writes the same key. When `config.toml` has
+   none, `config.Load` takes the one an older Claude Code plugin saved in
+   `~/.inlinr/claude-code.json` (`TokenFrom`, never written back by `Save`).
+   `signout` revokes it and clears it from both files.
 5. All subsequent ingest requests use `Authorization: Bearer in_d_...`.
 
 ### Heartbeat wire format (POST /api/v1/heartbeats)
