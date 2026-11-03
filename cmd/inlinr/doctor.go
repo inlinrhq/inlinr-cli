@@ -40,6 +40,10 @@ func runDoctor(args []string) error {
 	fmt.Printf("  queue:          %s\n", qp)
 	fmt.Printf("  api_url:        %s\n", config.APIURL)
 	fmt.Printf("  authenticated:  %t\n", cfg.Auth.DeviceToken != "")
+	if cfg.TokenFrom != "" {
+		pp, _ := config.PluginPath()
+		fmt.Printf("  token_from:     %s (the Claude Code plugin's connection)\n", pp)
+	}
 	fmt.Printf("  rate_limit_s:   %d\n", cfg.Behavior.HeartbeatRateLimitSeconds)
 
 	// Queue depth

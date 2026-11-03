@@ -14,6 +14,10 @@ import (
 // runSignout revokes the device token server-side (best-effort) and clears it
 // from local config. The clear always happens, even if the server call fails —
 // a local-only cleanup is still useful if the user is offline.
+//
+// The token is the machine's, shared by every inlinr plugin on it, so this
+// signs them all out: the Claude Code plugin reads the same config.toml, and
+// a token it saved itself (older releases) is cleared from its file too.
 func runSignout(args []string) error {
 	fs := flag.NewFlagSet("signout", flag.ExitOnError)
 	configPath := fs.String("config", "", "path to config.toml (default: ~/.inlinr/config.toml)")
@@ -49,10 +53,16 @@ func runSignout(args []string) error {
 	if *keepLocal {
 		return nil
 	}
+	revoked := cfg.Auth.DeviceToken
 	cfg.Auth.DeviceToken = ""
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("clear local token: %w", err)
 	}
-	fmt.Println("local token cleared")
+	if *configPath == "" {
+		if _, err := config.ClearPluginToken(revoked); err != nil {
+			return fmt.Errorf("clear the Claude Code plugin's token: %w", err)
+		}
+	}
+	fmt.Println("local token cleared: every inlinr plugin on this machine is signed out")
 	return nil
 }
