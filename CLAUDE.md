@@ -20,7 +20,8 @@ Sibling repos:
 - `inlinrhq/inlinr-vscode` — VS Code plugin that spawns this binary.
 - `inlinrhq/inlinr-claude-code` — Claude Code plugin. Does **not** spawn this
   binary, but shares its connection: it reads and writes `[auth]
-  device_token` in `config.toml`, and `error_reports` under `[behavior]`.
+  device_token` in `config.toml`, and `error_reports`, `paused`,
+  `paused_until`, `hide_file_names` and `hide_branch_names` under `[behavior]`.
   Its read positions stay in `~/.inlinr/claude-code.json`.
 - No JetBrains or Neovim plugin exists yet (both are "considering" on the roadmap).
 
@@ -44,6 +45,7 @@ cmd/inlinr/              # subcommand entry points
   heartbeat.go           # the hot path — plugins call this 100× a day
   doctor.go              # config dump + server ping
   signout.go             # revoke this device's token
+  pause.go               # `inlinr pause` / `resume`: the machine's pause, read by the plugin too
   upgrade.go             # self-update from GitHub Releases (signed SHA256SUMS)
   synccommits.go         # `inlinr sync-commits` — commits from any git host
   syncdeps.go            # `inlinr sync-deps` — manifests for dependency tracking

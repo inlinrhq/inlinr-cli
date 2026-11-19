@@ -45,6 +45,9 @@ func runDoctor(args []string) error {
 		fmt.Printf("  token_from:     %s (the Claude Code plugin's connection)\n", pp)
 	}
 	fmt.Printf("  rate_limit_s:   %d\n", cfg.Behavior.HeartbeatRateLimitSeconds)
+	fmt.Printf("  tracking:       %s\n", pauseLine(cfg, time.Now()))
+	fmt.Printf("  hide_files:     %t\n", cfg.Behavior.HideFileNames)
+	fmt.Printf("  hide_branches:  %t\n", cfg.Behavior.HideBranchNames)
 
 	// Queue depth
 	if q, err := queue.Open(qp); err == nil {
