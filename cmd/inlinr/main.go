@@ -9,6 +9,8 @@
 //	inlinr sync-commits [flags] send local git line counts (opt-in, never automatic)
 //	inlinr sync-deps [flags]   send npm manifests of a project followed on inlinr
 //	inlinr mcp                 serve the Model Context Protocol to an AI assistant
+//	inlinr pause [--for 2h]    stop tracking on this machine until resumed
+//	inlinr resume              start tracking again
 //	inlinr doctor              print config + ping server
 //	inlinr --version
 package main
@@ -69,6 +71,14 @@ func main() {
 		if err := runDoctor(os.Args[2:]); err != nil {
 			fail(err)
 		}
+	case "pause":
+		if err := runPause(os.Args[2:]); err != nil {
+			fail(err)
+		}
+	case "resume":
+		if err := runResume(os.Args[2:]); err != nil {
+			fail(err)
+		}
 	case "signout":
 		if err := runSignout(os.Args[2:]); err != nil {
 			fail(err)
@@ -99,6 +109,8 @@ Usage:
                                   Counts only — no messages, no file paths.
                                   Run it yourself; nothing calls it for you.
   inlinr mcp                      Serve inlinr's tools to an AI assistant over stdio (MCP).
+  inlinr pause [--for 2h]         Stop tracking on this machine (every plugin) until resumed.
+  inlinr resume                   Start tracking again.
   inlinr signout                  Revoke this device token (server + local).
   inlinr upgrade                  Download and install the latest release.
   inlinr doctor                   Print config and check server connectivity.

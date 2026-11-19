@@ -34,6 +34,19 @@ type Config struct {
 		// internal/report): no token, no file content, the home folder
 		// replaced by "~". `error_reports = false` turns it off.
 		ErrorReports bool `toml:"error_reports"`
+		// Paused stops tracking on this machine until `inlinr resume`:
+		// nothing is queued or sent, by the CLI (the VS Code extension's
+		// beats) or by the Claude Code plugin, which reads this file too.
+		Paused bool `toml:"paused"`
+		// PausedUntil stops tracking until that moment (`inlinr pause
+		// --for 1h`). Nil when the pause has no end, or there is none.
+		PausedUntil *time.Time `toml:"paused_until,omitempty"`
+		// HideFileNames sends every file as "HIDDEN.<ext>": the time and
+		// the language stay, the path (which often names a client) never
+		// leaves the machine. Shared with the Claude Code plugin.
+		HideFileNames bool `toml:"hide_file_names"`
+		// HideBranchNames sends no branch at all.
+		HideBranchNames bool `toml:"hide_branch_names"`
 	} `toml:"behavior"`
 	Logging struct {
 		Level string `toml:"level"`
@@ -55,6 +68,18 @@ func Defaults() Config {
 	c.Behavior.ErrorReports = true
 	c.Logging.Level = "info"
 	return c
+}
+
+// PausedAt says whether tracking is paused at now, and until when: a zero
+// time for a pause with no end. A timed pause that has run out is no pause.
+func (c Config) PausedAt(now time.Time) (bool, time.Time) {
+	if c.Behavior.PausedUntil != nil && now.Before(*c.Behavior.PausedUntil) {
+		return true, *c.Behavior.PausedUntil
+	}
+	if c.Behavior.Paused {
+		return true, time.Time{}
+	}
+	return false, time.Time{}
 }
 
 // Home returns ~/.inlinr (per-OS). Honours $INLINR_HOME override.

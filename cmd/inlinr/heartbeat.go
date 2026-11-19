@@ -79,6 +79,11 @@ func runHeartbeat(args []string) error {
 	if cfg.Auth.DeviceToken == "" {
 		return report.Quiet("not activated — run 'inlinr activate' first")
 	}
+	// Paused (`inlinr pause`): the beat is dropped, not kept for later, and
+	// the queue waits too. Nothing leaves the machine until `inlinr resume`.
+	if paused, _ := cfg.PausedAt(time.Now()); paused {
+		return nil
+	}
 
 	primary := heartbeat.Heartbeat{
 		Entity:             *entity,
@@ -128,21 +133,12 @@ func runHeartbeat(args []string) error {
 	// Apply per-(entity, branch, editor) rate-limit from config. Writes always
 	// pass through regardless of the rate-limit (save events are signal-rich).
 	rateLimit := cfg.Behavior.HeartbeatRateLimitSeconds
-	ok, err := q.ShouldEmit(ctx, primary, rateLimit)
-	if err != nil {
-		return fmt.Errorf("rate-limit check: %w", err)
-	}
-	if ok {
-		if err := q.Enqueue(ctx, primary); err != nil {
-			return fmt.Errorf("enqueue: %w", err)
-		}
-		if err := q.MarkEmitted(ctx, primary); err != nil {
-			return fmt.Errorf("mark emitted: %w", err)
-		}
+	if err := enqueue(ctx, q, primary, rateLimit, cfg); err != nil {
+		return err
 	}
 
 	if *extraStdin {
-		if err := enqueueFromStdin(ctx, q, rateLimit); err != nil {
+		if err := enqueueFromStdin(ctx, q, rateLimit, cfg); err != nil {
 			return fmt.Errorf("stdin beats: %w", err)
 		}
 	}
@@ -189,7 +185,29 @@ func flush(ctx context.Context, q *queue.Queue, cfg config.Config) error {
 	}
 }
 
-func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int) error {
+// enqueue queues one beat unless the rate limit drops it. The limit goes by
+// the real file, so each file still counts once per window; the queue gets
+// the beat with what the person chose to hide taken out.
+func enqueue(ctx context.Context, q *queue.Queue, h heartbeat.Heartbeat, rateLimit int, cfg config.Config) error {
+	ok, err := q.ShouldEmit(ctx, h, rateLimit)
+	if err != nil {
+		return fmt.Errorf("rate-limit check: %w", err)
+	}
+	if !ok {
+		return nil
+	}
+	sent := h
+	sent.Hide(cfg.Behavior.HideFileNames, cfg.Behavior.HideBranchNames)
+	if err := q.Enqueue(ctx, sent); err != nil {
+		return fmt.Errorf("enqueue: %w", err)
+	}
+	if err := q.MarkEmitted(ctx, h); err != nil {
+		return fmt.Errorf("mark emitted: %w", err)
+	}
+	return nil
+}
+
+func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int, cfg config.Config) error {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return err
@@ -203,17 +221,7 @@ func enqueueFromStdin(ctx context.Context, q *queue.Queue, rateLimit int) error 
 	}
 	for _, h := range beats {
 		warnUnknownAITool(&h)
-		ok, err := q.ShouldEmit(ctx, h, rateLimit)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			continue
-		}
-		if err := q.Enqueue(ctx, h); err != nil {
-			return err
-		}
-		if err := q.MarkEmitted(ctx, h); err != nil {
+		if err := enqueue(ctx, q, h, rateLimit, cfg); err != nil {
 			return err
 		}
 	}

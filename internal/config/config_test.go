@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func home(t *testing.T) string {
@@ -82,5 +83,56 @@ func TestClearPluginTokenWithoutFile(t *testing.T) {
 	home(t)
 	if cleared, err := ClearPluginToken("in_d_a"); err != nil || cleared {
 		t.Fatalf("%v %v", cleared, err)
+	}
+}
+
+func TestPause(t *testing.T) {
+	dir := home(t)
+	now := time.Date(2026, 11, 19, 10, 0, 0, 0, time.UTC)
+
+	c := Defaults()
+	if paused, _ := c.PausedAt(now); paused {
+		t.Fatal("a new machine is not paused")
+	}
+
+	c.Behavior.Paused = true
+	if paused, until := c.PausedAt(now); !paused || !until.IsZero() {
+		t.Fatalf("paused with no end: got %v %v", paused, until)
+	}
+
+	end := now.Add(time.Hour)
+	c.Behavior.Paused = false
+	c.Behavior.PausedUntil = &end
+	if paused, until := c.PausedAt(now); !paused || !until.Equal(end) {
+		t.Fatalf("paused for an hour: got %v %v", paused, until)
+	}
+	if paused, _ := c.PausedAt(end); paused {
+		t.Fatal("a timed pause ends on time")
+	}
+
+	// It survives a save, in a form the Claude Code plugin can read.
+	if err := Save(c); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "config.toml"))
+	if !strings.Contains(string(raw), "paused_until = 2026-11-19T11:00:00Z") {
+		t.Fatalf("config.toml:\n%s", raw)
+	}
+	back, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paused, until := back.PausedAt(now); !paused || !until.Equal(end) {
+		t.Fatalf("after a save: got %v %v", paused, until)
+	}
+
+	// No pause, no key.
+	back.Behavior.PausedUntil = nil
+	if err := Save(back); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ = os.ReadFile(filepath.Join(dir, "config.toml"))
+	if strings.Contains(string(raw), "paused_until") {
+		t.Fatalf("config.toml kept paused_until:\n%s", raw)
 	}
 }

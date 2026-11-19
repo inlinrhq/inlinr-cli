@@ -152,6 +152,8 @@ inlinr heartbeat \
 # --project-git-remote (only the name leaves the machine, never the path)
 inlinr doctor                       # diagnose config + connectivity
 inlinr upgrade                      # update this binary (signature + SHA256 verified)
+inlinr pause [--for 2h]             # stop tracking on this machine, every plugin, until resumed
+inlinr resume                       # start tracking again
 inlinr signout                      # revoke this machine's token (every plugin on it)
 inlinr sync-commits                 # send local git line counts (opt-in)
 inlinr sync-deps                    # send npm manifests of a followed project
@@ -203,7 +205,23 @@ device_token = "in_d_..."
 heartbeat_rate_limit_seconds = 120
 offline_queue_max = 10000
 error_reports = true   # false: never send the CLI's own errors to inlinr
+hide_file_names = false   # true: every file is sent as HIDDEN.<ext>
+hide_branch_names = false # true: no branch is sent
+# paused = true / paused_until = 2026-11-19T18:00:00Z: written by `inlinr pause`
 ```
+
+### Pause and hidden names
+
+`inlinr pause` stops tracking on the whole machine: this binary drops every
+beat the VS Code extension hands it, and the Claude Code plugin, which reads
+the same file, sends nothing either. What happens during a pause is never sent
+later. `--for 30m` ends it by itself; otherwise `inlinr resume` does.
+`inlinr doctor` says where it stands.
+
+`hide_file_names` keeps a file's extension (so the language is still known)
+and drops its name and folders; `hide_branch_names` sends no branch. A path or
+a branch often names a client. The project still comes from the git remote:
+rename it on inlinr.com if its name says too much.
 
 Queue at `~/.inlinr/queue.db`.
 
