@@ -1,0 +1,30 @@
+#!/bin/sh
+# Refuse any credit to an AI assistant (7IBO/socle, code/git.md): no
+# Co-Authored-By from Claude or Anthropic, no Claude-Session, no
+# "Generated with", no session link, no claude/ branch.
+#
+# As a hook (once per clone, done by the SessionStart hook in the cloud):
+#   cp .githooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+# In CI: sh .githooks/commit-msg --ci, with HEAD_SHA, COMMITS, BRANCH and
+# PR_BODY from the pull_request event.
+
+PATTERN='co-authored-by:.*(claude|anthropic)|claude-session|generated with[^a-z]*\[?claude|claude\.(ai|com)/code|noreply@anthropic\.com|claude-projects-attribution'
+
+fail() {
+  echo "attribution: $1" >&2
+  echo "Remove it: no credit to an AI assistant (7IBO/socle, code/git.md)." >&2
+  exit 1
+}
+
+if [ "$1" != "--ci" ]; then
+  grep -v '^#' "$1" | grep -qiE "$PATTERN" && fail "the commit message credits an AI assistant"
+  exit 0
+fi
+
+case "$BRANCH" in
+  claude/*) fail "branch $BRANCH starts with claude/" ;;
+esac
+printf '%s' "$PR_BODY" | grep -qiE "$PATTERN" && fail "the pull request body credits an AI assistant"
+git fetch -q --no-tags --depth="$((COMMITS + 1))" origin "$HEAD_SHA" || exit 1
+git log -n "$COMMITS" --format='%H%n%B%n%ae%n%ce' "$HEAD_SHA" | grep -iE "$PATTERN" && fail "a commit credits an AI assistant"
+exit 0
