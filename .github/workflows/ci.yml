@@ -23,3 +23,13 @@ jobs:
       # itself on every machine, so a vulnerable dependency ships everywhere.
       - name: Vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+      # No credit to an AI assistant in the commits or the branch
+      # (7IBO/socle, code/git.md): .githooks/commit-msg. Not the body: the
+      # event keeps the body the PR opened with, so an edit is never seen.
+      - name: No attribution
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMITS: ${{ github.event.pull_request.commits }}
+          BRANCH: ${{ github.head_ref }}
+        run: sh .githooks/commit-msg --ci

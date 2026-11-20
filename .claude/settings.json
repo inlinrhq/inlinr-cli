@@ -1,4 +1,9 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false,
   "extraKnownMarketplaces": {
     "inlinr": {
       "source": {
@@ -10,6 +15,15 @@
   },
   "hooks": {
     "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] || exit 0; cd \"$CLAUDE_PROJECT_DIR\" || exit 0; git config user.name 7IBO; git config user.email 71017357+7IBO@users.noreply.github.com; for h in .githooks/*; do cp \"$h\" .git/hooks/ && chmod +x \".git/hooks/${h##*/}\"; done; exit 0",
+            "timeout": 10
+          }
+        ]
+      },
       {
         "hooks": [
           {
