@@ -165,6 +165,9 @@ inlinr mcp                          # serve inlinr's tools to an AI assistant (M
 inlinr --version
 ```
 
+`sync-deps` feeds [dependency tracking](https://inlinr.com/dependencies) for a
+private repository, or one not on GitHub.
+
 ### In an AI assistant (MCP)
 
 `inlinr mcp` lets Claude Code, Cursor, Claude Desktop or any MCP client ask
@@ -189,12 +192,11 @@ what to upgrade first, from which version to which) and `find_usages` (the
 lines of this codebase that import a package, searched on your machine;
 nothing is sent). The package tools work without signing in.
 
-What each tool answers, and the setup for each assistant:
-[MCP server on inlinr.com](https://inlinr.com/integrations/mcp). A worked
-example, from `upgrade_notes` to the fixed code:
+What each tool answers, and the setup in any MCP client:
+[MCP server on inlinr.com](https://inlinr.com/integrations/mcp). Why an
+assistant should read the changelog before an upgrade, and the tools that
+serve it:
 [upgrading a dependency with your assistant](https://inlinr.com/guides/upgrade-a-dependency-with-your-assistant).
-`sync-deps` feeds [dependency tracking](https://inlinr.com/dependencies) for a
-private repository or one not on GitHub.
 
 ## Build
 
