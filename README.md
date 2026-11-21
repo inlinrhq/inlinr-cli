@@ -6,10 +6,14 @@
 # inlinr-cli
 
 Time tracking daemon for [inlinr](https://inlinr.com). Accepts heartbeats from
-editor plugins (VS Code, JetBrains, Neovim, …), buffers them in an on-disk
-SQLite queue, and uploads batches to the inlinr ingest endpoint.
+editor plugins (VS Code and its forks: Cursor, Windsurf, VSCodium), buffers
+them in an on-disk SQLite queue, and uploads batches to the inlinr ingest
+endpoint.
 
 Plugins call this binary as a subprocess — they don't talk to the API directly.
+The [VS Code extension](https://inlinr.com/integrations/vscode) downloads it,
+checks its signature and keeps it up to date, so most people never run it by
+hand.
 
 ## Install
 
@@ -161,6 +165,9 @@ inlinr mcp                          # serve inlinr's tools to an AI assistant (M
 inlinr --version
 ```
 
+`sync-deps` feeds [dependency tracking](https://inlinr.com/dependencies) for a
+private repository, or one not on GitHub.
+
 ### In an AI assistant (MCP)
 
 `inlinr mcp` lets Claude Code, Cursor, Claude Desktop or any MCP client ask
@@ -184,6 +191,12 @@ folder the assistant runs in; only its four dependency blocks are sent),
 what to upgrade first, from which version to which) and `find_usages` (the
 lines of this codebase that import a package, searched on your machine;
 nothing is sent). The package tools work without signing in.
+
+What each tool answers, and the setup in any MCP client:
+[MCP server on inlinr.com](https://inlinr.com/integrations/mcp). Why an
+assistant should read the changelog before an upgrade, and the tools that
+serve it:
+[upgrading a dependency with your assistant](https://inlinr.com/guides/upgrade-a-dependency-with-your-assistant).
 
 ## Build
 
