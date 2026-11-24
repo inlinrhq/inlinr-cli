@@ -93,7 +93,7 @@ récit de l'auteur**. Quand un seul suffit, c'est le premier de la ligne.
 |---|---|
 | Commandes, file d'attente, client HTTP, MCP, lecture de git ou des manifestes | code, deux fois : justesse et cas limites, puis charge (appels à inlinr.com, verrous SQLite, durée de `heartbeat`) |
 | Workflows, signature et mise à jour automatique, jeton, ce qui quitte la machine | code + ops |
-| Docs ou outillage seuls | code, deux fois : les faits et commandes, puis l'effet sur les autres règles |
+| Docs ou outillage seuls | code, une fois (étape 4 du cycle) : les faits et commandes, et l'effet sur les autres règles |
 
 - **Code** : justesse (vide, null, cas limites, plusieurs `inlinr` lancés en
   même temps sur la même file, un verrou tenu pendant un appel réseau) ; rien
@@ -150,9 +150,9 @@ relecteur se vérifie, ce n'est pas un ordre.
   faux se corrige dans la PR qui change le code.
 - Un refactor est sa propre PR (`refactor(scope): …`), sans changement de
   comportement, avec les tests qui le prouvent.
-- Une règle ou un contrat qui change met à jour, dans la même PR, le CLAUDE.md,
-  le README (commandes, clés de configuration) et la section du contrat des
-  autres dépôts.
+- Une règle ou un contrat qui change met à jour, dans la même PR, le CLAUDE.md
+  et le README (commandes, clés de configuration), puis la section du contrat
+  des autres dépôts, par une PR dans chacun.
 
 ## Textes
 
