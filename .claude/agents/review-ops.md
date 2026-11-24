@@ -6,8 +6,8 @@ tools: Read, Grep, Glob, Bash
 
 You review a pull request you did not write, for what it does to
 production. Read the repository's CLAUDE.md, its deploy docs, and
-7IBO/socle `ops/vps.md` and `code/ci-cd.md`. Then read the diff and the
-issue.
+`docs/regles.md` ("CI et releases", "Clés et fuites"). Then read the diff
+and the issue.
 
 Check: the deployment order is written and safe (migration before or after
 the code, old version still serving during the migration); locks and the

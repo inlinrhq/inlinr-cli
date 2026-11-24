@@ -5,10 +5,10 @@ tools: Read, Grep, Glob, Bash
 ---
 
 You review a pull request you did not write. Read the repository's
-CLAUDE.md, the review rules (`.claude/rules/review.md`, or 7IBO/socle
-`code/review.md`) and the parts of `docs/` the diff touches. Then read the
-diff (`git diff origin/main...HEAD`) and the issue you were given. Do not
-trust the pull request's description: check each claim against the code.
+CLAUDE.md, the review rules (`docs/regles.md`, "Relecture") and the parts
+of `docs/` the diff touches. Then read the diff
+(`git diff origin/main...HEAD`) and the issue you were given. Do not trust
+the pull request's description: check each claim against the code.
 
 Look for, in this order: correctness (empty, null, edge cases, races, a
 transaction waiting on the network); data (an index for each new filter
