@@ -199,13 +199,13 @@ vérifient en relecture.
   push sur une PR, brouillon compris (ni filtre sur les brouillons ni
   `timeout-minutes`). Aucune tâche planifiée dans GitHub Actions.
 - Chaque job a un `timeout-minutes`, pour qu'un test bloqué ne brûle pas
-  les 6 heures par défaut : c'est l'écart au 24/11 dit plus haut, dans tous
-  les workflows de ce dépôt.
+  les 6 heures par défaut : écart au 24/11 : absent de `ci.yml` comme de
+  `release.yml`.
 - Un job qui tient un jeton de publication fige ses outils : les actions
   par leur commit, la version de bun ou de Go, les outils de publication par
   le lockfile. Tenu au 24/11 : `release.yml`,
-  qui tient la clé de signature, fige ses actions par commit et sa version
-  de Go.
+  qui tient la clé de signature, fige ses actions par commit ; sa version
+  de Go suit la ligne 1.25, pas un correctif exact.
 - Une release part quand un merge sur `main` change `VERSION` (X.Y.Z) :
   `release.yml` pose le tag, compile pour cinq cibles, signe `SHA256SUMS.txt`
   et publie. Une PR qui ne veut pas publier ne touche pas à `VERSION`.
@@ -275,7 +275,8 @@ GitHub (la dernière release, pour `upgrade`).
   d'autres tickets.
 - Un ticket : titre en français à l'infinitif, 1 à 4 puces. Labels : un seul
   de type (Feature, Improvement, Bug), au besoin un de domaine (Marketing,
-  Légal, Ops, SEO, UI). Ni estimation, ni priorité, ni assigné. Backlog
+  Légal, Ops, SEO, UI) ; un geste de Thibault n'a pas besoin de type. Ni
+  estimation, ni priorité, ni assigné. Backlog
   (prévu dans le mois), Todo (prêt, ou un geste daté), In Progress, In
   Review, Done. Chercher avant de créer ; un doublon se ferme vers
   l'original. Une date dépassée se remet au jour réel ou se retire dans la
@@ -304,7 +305,7 @@ GitHub (la dernière release, pour `upgrade`).
   lien d'un fil ne s'écrit que dans Linear, jamais dans une PR, un commit ni
   un fichier du dépôt.
 - **Ce qui attend Thibault vit à un seul endroit** : un ticket Linear au label
-  Thibault (une phrase qui dit le geste, le lien du fil, et toujours une date :
+  Thibault (un titre qui dit le geste, le lien du fil, et toujours une date :
   l'échéance, sinon le jour prévu pour la séance).
   Jamais une liste tenue dans un doc de ce dépôt ni répétée de message en
   message.
@@ -321,4 +322,5 @@ GitHub (la dernière release, pour `upgrade`).
   d'un projet (« Hebdomadaire · tous les modèles »). Au-delà de 60 % dans
   les trois jours et demi qui suivent sa remise à zéro, ou de 85 % à tout
   moment, seul continue ce qui tient une date (un ticket daté dans la
-  semaine, une sortie, une panne), sans sous-agent hors relecture de PR.
+  semaine, une sortie, une panne), sans sous-agent hors relecture de PR. La
+  relève de la boîte, la supervision et les urgences ne se décalent jamais.
