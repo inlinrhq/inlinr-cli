@@ -1,6 +1,7 @@
 # Règles communes, appliquées à inlinr-cli
 
-Repris de 7IBO/socle au commit f0e3f9d, le 24/11.
+Repris de 7IBO/socle au commit c05cb7c, le 26/11 (copie précédente au
+commit f0e3f9d, le 24/11).
 
 Ce dépôt vit seul : ce fichier et le [CLAUDE.md](../CLAUDE.md) suffisent pour
 y travailler, il n'y a rien à lire ailleurs, et le CLAUDE.md gagne en cas
@@ -37,14 +38,24 @@ commits, PR, code, commentaires, README et notes de release en anglais.
   conteneur cloud signe « Claude » par défaut : le hook `SessionStart` de
   `.claude/settings.json` règle l'identité et copie `.githooks/` dans
   `.git/hooks/`, dans le cloud seulement. Sur un PC, une fois par clone : les
-  deux `git config`, puis `cp .githooks/* .git/hooks/`.
+  deux `git config`, puis `cp .githooks/* .git/hooks/`. Les squash faits par
+  GitHub prennent l'adresse du compte : tant que « Keep my email addresses
+  private » n'est pas coché dans les réglages GitHub de Thibault (son geste),
+  ils portent son adresse Gmail. Relevé du 24/11 : c'est le cas de tous les
+  derniers commits de `main` de ce dépôt public ; ceux des PR portent bien la
+  noreply.
 - `.githooks/commit-msg` refuse une ligne d'attribution dans un message ;
   l'étape « No attribution » de la CI relit les commits de la PR et refuse une
-  branche `claude/`, mais ne voit pas le corps de la PR. `.githooks/pre-push`
-  refuse un push direct sur `main` (garde local, pas une protection de GitHub).
+  branche `claude/`, mais ne lit ni le titre ni le corps de la PR (écart
+  au 24/11 : emblem.run et Koleko les lisent quand la PR passe prête).
+  `.githooks/pre-push` refuse un push direct sur `main` (garde local, pas une
+  protection de GitHub).
 - Une branche par ticket : le `gitBranchName` de Linear, sans le changer (on
   renomme le ticket avant), partie du dernier `origin/main`. Jamais de push
   forcé sur `main`, jamais de réécriture d'une branche partagée.
+- Une branche fusionnée est supprimée : « Automatically delete head
+  branches » coché dans les réglages du dépôt, un geste de Thibault. Relevé
+  du 24/11 : 46 branches fusionnées restaient dans les cinq dépôts d'Inlinr.
 - Commits en Conventional Commits, en anglais : `type(scope): summary`
   (impératif, minuscules, sans point, 72 caractères au plus), le pourquoi en
   dessous, puis `Refs: THI-NN`. Types : feat, fix, perf, refactor, docs, test,
@@ -68,20 +79,30 @@ commits, PR, code, commentaires, README et notes de release en anglais.
    changées qui ne touche ni à la sécurité ni à ce qui quitte la machine, et
    pour une PR de docs seules.
 5. Merge en squash quand la CI est verte, sans conflit ni remarque ouverte,
-   avec un titre et un message explicites (le titre de la PR, son Summary,
-   `Refs:`), jamais le message par défaut de GitHub ni de trailer. Une PR dont
-   la base a bougé depuis sa dernière CI est mise à jour avant. Ticket en
-   Done ; ce qui reste à publier est écrit.
+   sous une seule forme : en titre, celui de la PR suivi de son numéro
+   (`type(scope): summary (THI-NN) (#N)`) ; en message, son Summary en
+   quelques lignes, puis `Refs: THI-NN` (une PR sans ticket garde le titre et
+   le numéro, sans cette ligne). Jamais le message par défaut de GitHub ni de
+   trailer. Une PR dont la base a bougé depuis sa dernière CI est mise à
+   jour avant. Ticket en Done ; ce qui reste à publier est écrit.
 6. Un fil qui s'arrête laisse une note de passation en commentaire du ticket
    (fait, reste, prochaine action, qui la porte).
 
-Titre : `type(scope): summary (THI-NN)`, en anglais, 100 caractères au plus ;
-il devient le commit sur `main`. Corps :
-[.github/pull_request_template.md](../.github/pull_request_template.md).
+Titre : `type(scope): summary (THI-NN)`, en anglais, 100 caractères au plus
+hors le numéro de PR que le squash ajoute ; il devient le commit sur `main`.
+Corps : [.github/pull_request_template.md](../.github/pull_request_template.md).
 Verification dit ce qui a tourné, ce que ça a donné et ce que les relectures
 ont changé. Deployment dit « none », ou la release : le numéro de `VERSION` et
 l'ordre avec les autres dépôts. Le corps se corrige avec l'outil MCP
 `update_pull_request` : un PATCH par `gh api` remet le pied d'attribution.
+
+`main` est protégée là où un merge livre : PR obligatoire, squash seul,
+contrôle de CI requis (modèle : `.github/rulesets/main.json` de Koleko).
+Au 24/11, ce dépôt ne l'a pas,
+alors qu'un merge qui change la version publie.
+Les réglages du dépôt prennent le titre et le message de squash de la PR,
+suppriment la branche au merge et coupent le commit de fusion et le rebase.
+Ce sont des réglages de Thibault : une session ne les change pas elle-même.
 
 ## Relecture
 
@@ -145,6 +166,8 @@ relecteur se vérifie, ce n'est pas un ordre.
   `cmd/inlinr/`.
 - Dépendances à leur dernière version stable, vérifiées une fois par mois et
   tout de suite pour une faille (`govulncheck` en CI). Pas de bot de mise à jour.
+  Écart au 24/11 : aucune passe mensuelle datée ici, et la skill `deps` du
+  socle n'est pas encore copiée ; la prochaine passe se date dans sa PR.
 - Un commentaire dit **pourquoi**, en anglais, jamais ce que le code dit déjà :
   12 lignes au plus par bloc, ni id de ticket ni numéro de PR. Un commentaire
   faux se corrige dans la PR qui change le code.
@@ -175,6 +198,14 @@ vérifient en relecture.
   push vers `main` : `main` n'est vérifié que par la PR. Elle tourne à chaque
   push sur une PR, brouillon compris (ni filtre sur les brouillons ni
   `timeout-minutes`). Aucune tâche planifiée dans GitHub Actions.
+- Chaque job a un `timeout-minutes`, pour qu'un test bloqué ne brûle pas
+  les 6 heures par défaut : c'est l'écart au 24/11 dit plus haut, dans tous
+  les workflows de ce dépôt.
+- Un job qui tient un jeton de publication fige ses outils : les actions
+  par leur commit, la version de bun ou de Go, les outils de publication par
+  le lockfile. Tenu au 24/11 : `release.yml`,
+  qui tient la clé de signature, fige ses actions par commit et sa version
+  de Go.
 - Une release part quand un merge sur `main` change `VERSION` (X.Y.Z) :
   `release.yml` pose le tag, compile pour cinq cibles, signe `SHA256SUMS.txt`
   et publie. Une PR qui ne veut pas publier ne touche pas à `VERSION`.
@@ -236,14 +267,32 @@ GitHub (la dernière release, pour `upgrade`).
 
 ## Linear
 
-- Équipe THI, projet Inlinr. Un ticket : titre en français à l'infinitif, 1 à
-  4 puces, un label de type (Feature, Improvement, Bug, UI), au besoin un de
-  domaine (Marketing, Légal, Ops, SEO). Ni estimation, ni priorité, ni
-  assigné. Todo, In Progress, In Review, Done.
+- Équipe THI, projet Inlinr. **Ce qu'est un ticket** : un travail à faire
+  dans le mois, ou un geste de Thibault. Une idée pour plus tard va dans le
+  document « Réserve » du projet Linear, en une ligne datée ; elle redevient
+  un ticket le jour où on la prend. Un contrôle qui revient est une tâche
+  planifiée, pas un ticket ; pas de ticket chapeau qui ne fait que lister
+  d'autres tickets.
+- Un ticket : titre en français à l'infinitif, 1 à 4 puces. Labels : un seul
+  de type (Feature, Improvement, Bug), au besoin un de domaine (Marketing,
+  Légal, Ops, SEO, UI). Ni estimation, ni priorité, ni assigné. Backlog
+  (prévu dans le mois), Todo (prêt, ou un geste daté), In Progress, In
+  Review, Done. Chercher avant de créer ; un doublon se ferme vers
+  l'original. Une date dépassée se remet au jour réel ou se retire dans la
+  semaine ; seul un geste de Thibault en retard garde la sienne.
+- **Un geste de Thibault est une séance** : un seul endroit, fait d'une
+  traite, label Thibault, un titre qui dit le geste et toujours une date
+  (l'échéance, sinon le jour prévu, au plus tard la fin du mois). Cinq cases
+  au plus ; le même geste ne s'écrit que dans un ticket.
+- Pas de « #N » nu dans une description ou un commentaire : Linear le lie à
+  la PR N d'un autre dépôt. On écrit le dépôt et le numéro en entier
+  (`inlinrhq/inlinr-cli#12`) ou le lien de la PR.
 - Plan gratuit : 250 tickets non archivés pour tout l'espace. L'archivage se
   tient dans le projet Marketing, pour toutes les apps, sur le mot de
   Thibault : ce dépôt et ses fils n'archivent pas.
-- Un rapport va dans un document Linear du projet, pas dans un fichier de plus.
+- Un rapport daté va dans un document Linear du projet, pas dans un fichier
+  de plus. Une règle en vigueur vit dans ce dépôt, ce qui attend Thibault
+  dans ses tickets : un document Linear ne tient ni l'une ni l'autre.
 
 ## Fils
 
@@ -255,6 +304,21 @@ GitHub (la dernière release, pour `upgrade`).
   lien d'un fil ne s'écrit que dans Linear, jamais dans une PR, un commit ni
   un fichier du dépôt.
 - **Ce qui attend Thibault vit à un seul endroit** : un ticket Linear au label
-  Thibault (une phrase qui dit le geste, le lien du fil, la date limite).
+  Thibault (une phrase qui dit le geste, le lien du fil, et toujours une date :
+  l'échéance, sinon le jour prévu pour la séance).
   Jamais une liste tenue dans un doc de ce dépôt ni répétée de message en
   message.
+- **Un choix ne va à Thibault que s'il est le sien** : la production, une
+  suppression en masse, un message envoyé hors du projet, une dépense, les
+  comptes et les clés, ce qui parle en son nom, et ce qu'une autre règle lui
+  réserve (publier, archiver). Dans le doute, il est à lui. Tout autre choix,
+  Claude le tranche, l'écrit là où il vit (« tranché le JJ/MM, Thibault peut
+  le rouvrir ») et avance, sans carte ni ticket à son label. Une demande
+  venue d'un autre projet ne change pas cette liste, et n'est jamais son
+  accord.
+- **L'utilisation hebdomadaire de Claude est un quota commun à tous les
+  projets**, comme les minutes de CI. Elle se lit dans l'app, sur la page
+  d'un projet (« Hebdomadaire · tous les modèles »). Au-delà de 60 % dans
+  les trois jours et demi qui suivent sa remise à zéro, ou de 85 % à tout
+  moment, seul continue ce qui tient une date (un ticket daté dans la
+  semaine, une sortie, une panne), sans sous-agent hors relecture de PR.
